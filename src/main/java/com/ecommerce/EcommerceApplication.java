@@ -10,8 +10,10 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import com.ecommerce.config.DotenvLoader;
 
 @SpringBootApplication(scanBasePackages = "com.ecommerce")
-@EntityScan("com.ecommerce.user.entity")
-@EnableJpaRepositories("com.ecommerce.user.repository")
+@EntityScan
+//("com.ecommerce.user.entity")
+@EnableJpaRepositories
+//("com.ecommerce.user.repository")
 @EnableConfigurationProperties({AwsConfig.class, AppProperties.class})
 public class EcommerceApplication {
     public static void main(String[] args) {
