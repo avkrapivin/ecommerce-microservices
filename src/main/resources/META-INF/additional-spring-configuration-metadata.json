@@ -1,0 +1,19 @@
+{
+  "properties": [
+    {
+      "name": "aws.region",
+      "type": "java.lang.String",
+      "description": "AWS region"
+    },
+    {
+      "name": "aws.cognito.user-pool-id",
+      "type": "java.lang.String",
+      "description": "AWS Cognito User Pool ID"
+    },
+    {
+      "name": "aws.cognito.client-id",
+      "type": "java.lang.String",
+      "description": "AWS Cognito Client ID"
+    }
+  ]
+} 
