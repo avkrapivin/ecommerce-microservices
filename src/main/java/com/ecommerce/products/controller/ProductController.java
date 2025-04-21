@@ -4,9 +4,11 @@ import com.ecommerce.products.dto.*;
 import com.ecommerce.products.service.ProductService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.net.URI;
 import java.util.List;
 
@@ -22,8 +24,29 @@ public class ProductController {
     }
 
     @GetMapping
-    public ResponseEntity<List<ProductDto>> getAllProducts() {
-        return ResponseEntity.ok(productService.getAllProducts());
+    public ResponseEntity<Page<ProductDto>> getProducts(
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) Long categoryId,
+            @RequestParam(required = false) BigDecimal minPrice,
+            @RequestParam(required = false) BigDecimal maxPrice,
+            @RequestParam(required = false) List<String> specifications,
+            @RequestParam(required = false) String sortBy,
+            @RequestParam(required = false) String sortDirection,
+            @RequestParam(required = false, defaultValue = "0") Integer page,
+            @RequestParam(required = false, defaultValue = "10") Integer size) {
+
+        ProductFilterDto filter = new ProductFilterDto();
+        filter.setSearch(search);
+        filter.setCategoryId(categoryId);
+        filter.setMinPrice(minPrice);
+        filter.setMaxPrice(maxPrice);
+        filter.setSpecifications(specifications);
+        filter.setSortBy(sortBy);
+        filter.setSortDirection(sortDirection);
+        filter.setPage(page);
+        filter.setSize(size);
+
+        return ResponseEntity.ok(productService.getProducts(filter));
     }
 
     @GetMapping("/category/{categoryId}")

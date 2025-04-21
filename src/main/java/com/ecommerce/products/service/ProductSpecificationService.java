@@ -1,73 +1,85 @@
 package com.ecommerce.products.service;
 
-import com.ecommerce.products.dto.*;
+import com.ecommerce.products.dto.ProductSpecificationDto;
+import com.ecommerce.products.entity.Product;
 import com.ecommerce.products.entity.ProductSpecification;
-import com.ecommerce.products.repository.ProductSpecificationRepository;
 import com.ecommerce.products.repository.ProductRepository;
+import com.ecommerce.products.repository.ProductSpecificationRepository;
 import com.ecommerce.common.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class ProductSpecificationService {
-    private final ProductSpecificationRepository productSpecificationRepository;
+    private final ProductSpecificationRepository specificationRepository;
     private final ProductRepository productRepository;
 
     @Transactional(readOnly = true)
-    @Cacheable(value = "specifications", key = "#productId")
+    @Cacheable(value = "productSpecifications", key = "'product:' + #productId")
     public List<ProductSpecificationDto> getProductSpecifications(Long productId) {
-        return productSpecificationRepository.findByProductId(productId).stream()
+        return specificationRepository.findByProductId(productId).stream()
                 .map(this::convertToDto)
                 .collect(Collectors.toList());
     }
 
     @Transactional
-    @CacheEvict(value = {"specifications", "products"}, allEntries = true)
-    public ProductSpecificationDto createSpecification(CreateProductSpecificationDto createSpecificationDto) {
+    @CacheEvict(value = "productSpecifications", key = "'product:' + #productId")
+    public ProductSpecificationDto createSpecification(Long productId, ProductSpecificationDto specificationDto) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + productId));
+
         ProductSpecification specification = new ProductSpecification();
-        specification.setProduct(productRepository.findById(createSpecificationDto.getProductId())
-                .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + createSpecificationDto.getProductId())));
-        specification.setName(createSpecificationDto.getName());
-        specification.setValue(createSpecificationDto.getValue());
-        specification.setDisplayOrder(createSpecificationDto.getDisplayOrder());
+        specification.setProduct(product);
+        specification.setName(specificationDto.getName());
+        specification.setValue(specificationDto.getValue());
 
-        return convertToDto(productSpecificationRepository.save(specification));
+        return convertToDto(specificationRepository.save(specification));
     }
 
     @Transactional
-    @CacheEvict(value = {"specifications", "products"}, allEntries = true)
-    public ProductSpecificationDto updateSpecification(Long id, UpdateProductSpecificationDto updateSpecificationDto) {
-        ProductSpecification specification = productSpecificationRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Specification not found with id: " + id));
+    @CacheEvict(value = "productSpecifications", key = "'product:' + #productId")
+    public ProductSpecificationDto updateSpecification(Long productId, Long specificationId, ProductSpecificationDto specificationDto) {
+        ProductSpecification specification = specificationRepository.findById(specificationId)
+                .orElseThrow(() -> new ResourceNotFoundException("Specification not found with id: " + specificationId));
 
-        specification.setName(updateSpecificationDto.getName());
-        specification.setValue(updateSpecificationDto.getValue());
-        specification.setDisplayOrder(updateSpecificationDto.getDisplayOrder());
-
-        return convertToDto(productSpecificationRepository.save(specification));
-    }
-
-    @Transactional
-    @CacheEvict(value = {"specifications", "products"}, allEntries = true)
-    public void deleteSpecification(Long id) {
-        if (!productSpecificationRepository.existsById(id)) {
-            throw new ResourceNotFoundException("Specification not found with id: " + id);
+        if (!specification.getProduct().getId().equals(productId)) {
+            throw new IllegalStateException("Specification does not belong to the specified product");
         }
-        productSpecificationRepository.deleteById(id);
+
+        specification.setName(specificationDto.getName());
+        specification.setValue(specificationDto.getValue());
+
+        return convertToDto(specificationRepository.save(specification));
+    }
+
+    @Transactional
+    @CacheEvict(value = "productSpecifications", key = "'product:' + #productId")
+    public void deleteSpecification(Long productId, Long specificationId) {
+        ProductSpecification specification = specificationRepository.findById(specificationId)
+                .orElseThrow(() -> new ResourceNotFoundException("Specification not found with id: " + specificationId));
+
+        if (!specification.getProduct().getId().equals(productId)) {
+            throw new IllegalStateException("Specification does not belong to the specified product");
+        }
+
+        specificationRepository.delete(specification);
     }
 
     private ProductSpecificationDto convertToDto(ProductSpecification specification) {
         ProductSpecificationDto dto = new ProductSpecificationDto();
         dto.setId(specification.getId());
+        dto.setProductId(specification.getProduct().getId());
         dto.setName(specification.getName());
         dto.setValue(specification.getValue());
-        dto.setDisplayOrder(specification.getDisplayOrder());
+        dto.setCreatedAt(specification.getCreatedAt());
+        dto.setUpdatedAt(specification.getUpdatedAt());
         return dto;
     }
 } 

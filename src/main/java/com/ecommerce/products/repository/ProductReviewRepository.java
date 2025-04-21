@@ -7,6 +7,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface ProductReviewRepository extends JpaRepository<ProductReview, Long> {
@@ -22,5 +23,7 @@ public interface ProductReviewRepository extends JpaRepository<ProductReview, Lo
 
     List<ProductReview> findByUserEmail(String userEmail);
 
-    ProductReview findByIdAndProductId(Long id, Long productId);
+    Optional<ProductReview> findByIdAndProductId(Long id, Long productId);
+
+    boolean existsByProductIdAndUserId(Long productId, Long userId);
 } 

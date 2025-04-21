@@ -1,47 +1,47 @@
 package com.ecommerce.products.controller;
 
-import com.ecommerce.products.dto.*;
+import com.ecommerce.products.dto.ProductReviewDto;
 import com.ecommerce.products.service.ProductReviewService;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.net.URI;
 import java.util.List;
 
 @RestController
-@RequestMapping("/reviews")
+@RequestMapping("/products/{productId}/reviews")
 @RequiredArgsConstructor
 public class ProductReviewController {
-    private final ProductReviewService productReviewService;
+    private final ProductReviewService reviewService;
 
-    @GetMapping("/product/{productId}")
+    @GetMapping
     public ResponseEntity<List<ProductReviewDto>> getProductReviews(@PathVariable Long productId) {
-        return ResponseEntity.ok(productReviewService.getProductReviews(productId));
-    }
-
-    @GetMapping("/user/{userId}")
-    public ResponseEntity<List<ProductReviewDto>> getUserReviews(@PathVariable Long userId) {
-        return ResponseEntity.ok(productReviewService.getUserReviews(userId));
+        return ResponseEntity.ok(reviewService.getProductReviews(productId));
     }
 
     @PostMapping
-    public ResponseEntity<ProductReviewDto> createReview(@Valid @RequestBody CreateProductReviewDto createReviewDto) {
-        ProductReviewDto createdReview = productReviewService.createReview(createReviewDto);
-        return ResponseEntity
-                .created(URI.create("/reviews/" + createdReview.getId()))
-                .body(createdReview);
+    public ResponseEntity<ProductReviewDto> createReview(
+            @PathVariable Long productId,
+            @RequestHeader("X-User-Id") Long userId,
+            @RequestBody ProductReviewDto reviewDto) {
+        return ResponseEntity.ok(reviewService.createReview(productId, userId, reviewDto));
     }
 
-    @PutMapping("/{id}")
-    public ResponseEntity<ProductReviewDto> updateReview(@PathVariable Long id, @Valid @RequestBody UpdateProductReviewDto updateReviewDto) {
-        return ResponseEntity.ok(productReviewService.updateReview(id, updateReviewDto));
+    @PutMapping("/{reviewId}")
+    public ResponseEntity<ProductReviewDto> updateReview(
+            @PathVariable Long productId,
+            @PathVariable Long reviewId,
+            @RequestHeader("X-User-Id") Long userId,
+            @RequestBody ProductReviewDto reviewDto) {
+        return ResponseEntity.ok(reviewService.updateReview(productId, reviewId, userId, reviewDto));
     }
 
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteReview(@PathVariable Long id) {
-        productReviewService.deleteReview(id);
-        return ResponseEntity.ok().build();
+    @DeleteMapping("/{reviewId}")
+    public ResponseEntity<Void> deleteReview(
+            @PathVariable Long productId,
+            @PathVariable Long reviewId,
+            @RequestHeader("X-User-Id") Long userId) {
+        reviewService.deleteReview(productId, reviewId, userId);
+        return ResponseEntity.noContent().build();
     }
 } 

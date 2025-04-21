@@ -19,7 +19,7 @@ public class ProductSpecification {
     @Column(nullable = false)
     private String name;
 
-    @Column(nullable = false, columnDefinition = "TEXT")
+    @Column(nullable = false)
     private String value;
 
     @Column(nullable = false)

@@ -4,10 +4,15 @@ import com.ecommerce.products.dto.*;
 import com.ecommerce.products.entity.Product;
 import com.ecommerce.products.repository.ProductRepository;
 import com.ecommerce.products.repository.CategoryRepository;
+import com.ecommerce.products.specification.ProductSpecification;
 import com.ecommerce.common.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
@@ -49,6 +54,29 @@ public class ProductService {
         return productRepository.findByNameContainingIgnoreCase(name).stream()
                 .map(this::convertToDto)
                 .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    @Cacheable(value = "products", key = "#filter.toString()")
+    public Page<ProductDto> getProducts(ProductFilterDto filter) {
+        // Создаем спецификацию для фильтрации
+        ProductSpecification specification = new ProductSpecification(filter);
+
+        // Создаем сортировку
+        Sort sort = createSort(filter.getSortBy(), filter.getSortDirection());
+
+        // Создаем пагинацию
+        Pageable pageable = PageRequest.of(
+            filter.getPage() != null ? filter.getPage() : 0,
+            filter.getSize() != null ? filter.getSize() : 10,
+            sort
+        );
+
+        // Получаем отфильтрованные и отсортированные продукты
+        Page<Product> products = productRepository.findAll(specification, pageable);
+
+        // Преобразуем в DTO
+        return products.map(this::convertToDto);
     }
 
     @Transactional
@@ -114,5 +142,18 @@ public class ProductService {
                 .orElseThrow(() -> new ResourceNotFoundException("Category not found with id: " + dto.getCategoryId())));
         product.setSku(dto.getSku());
         product.setActive(dto.isActive());
+    }
+
+    private Sort createSort(String sortBy, String sortDirection) {
+        if (sortBy == null) {
+            return Sort.unsorted();
+        }
+
+        Sort.Direction direction = Sort.Direction.ASC;
+        if (sortDirection != null && sortDirection.equalsIgnoreCase("desc")) {
+            direction = Sort.Direction.DESC;
+        }
+
+        return Sort.by(direction, sortBy);
     }
 } 

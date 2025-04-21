@@ -21,7 +21,7 @@ public class S3Service {
     private String bucketName;
 
     public String uploadFile(MultipartFile file) throws IOException {
-        String fileName = UUID.randomUUID().toString() + "_" + file.getOriginalFilename();
+        String fileName = "products/" + UUID.randomUUID().toString() + "_" + file.getOriginalFilename();
         
         PutObjectRequest putObjectRequest = PutObjectRequest.builder()
                 .bucket(bucketName)

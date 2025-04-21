@@ -1,0 +1,133 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Stack for OnlineShop S3 bucket, IAM user and Cognito user pool.
+
+Resources:
+
+  ## S3 Bucket
+  ProductImagesBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: onlineshop-product-images
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  ## S3 Bucket Policy
+  ProductImagesBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref ProductImagesBucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal: "*"
+            Action:
+              - s3:GetObject
+            Resource: !Sub "${ProductImagesBucket.Arn}/*"
+            Condition:
+              StringLikeIfExists:
+                s3:ObjectContentType: "image/*"
+
+  ## IAM User
+  S3UploadUser:
+    Type: AWS::IAM::User
+    Properties:
+      UserName: s3-upload-user
+
+  ## IAM Policy for S3 Upload User
+  S3UploadUserPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: s3-upload-user-policy
+      Users:
+        - !Ref S3UploadUser
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - s3:PutObject
+              - s3:GetObject
+            Resource: !Sub "${ProductImagesBucket.Arn}/*"
+
+  ## Cognito User Pool
+  CognitoUserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: onlineshop-user-pool
+      AutoVerifiedAttributes:
+        - email
+      Schema:
+        - Name: email
+          Required: true
+          Mutable: true
+        - Name: given_name
+          Required: true
+          Mutable: true
+        - Name: family_name
+          Required: true
+          Mutable: true
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 8
+          RequireUppercase: true
+          RequireLowercase: true
+          RequireNumbers: true
+          RequireSymbols: true
+
+  ## Cognito User Pool Client
+  CognitoUserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      ClientName: ecommerce-app
+      UserPoolId: !Ref CognitoUserPool
+      GenerateSecret: false
+      ExplicitAuthFlows:
+        - ALLOW_USER_PASSWORD_AUTH
+        - ALLOW_REFRESH_TOKEN_AUTH
+        - ALLOW_USER_SRP_AUTH
+        - ALLOW_USER_AUTH
+      CallbackURLs:
+        - http://localhost:8080/api/auth/callback
+      SupportedIdentityProviders:
+        - COGNITO
+
+  ## Cognito User Pool Domain
+  CognitoUserPoolDomain:
+    Type: AWS::Cognito::UserPoolDomain
+    Properties:
+      Domain: 16egwzyxgo
+      UserPoolId: !Ref CognitoUserPool
+
+  ## Cognito User Group (admin)
+  CognitoAdminGroup:
+    Type: AWS::Cognito::UserPoolGroup
+    Properties:
+      GroupName: admin
+      UserPoolId: !Ref CognitoUserPool
+      Description: Admin group for onlineshop users
+
+Outputs:
+
+  BucketName:
+    Description: Name of the created S3 bucket
+    Value: !Ref ProductImagesBucket
+
+  S3UploadUserName:
+    Description: IAM User name for uploading to S3
+    Value: !Ref S3UploadUser
+
+  CognitoUserPoolId:
+    Description: ID of the created Cognito User Pool
+    Value: !Ref CognitoUserPool
+
+  CognitoUserPoolClientId:
+    Description: ID of the created Cognito App Client
+    Value: !Ref CognitoUserPoolClient
+
+  CognitoDomain:
+    Description: Cognito Domain URL
+    Value: !Sub "https://${CognitoUserPoolDomain.Domain}.auth.${AWS::Region}.amazoncognito.com"
