@@ -38,7 +38,7 @@ public class ProductSpecificationService {
         ProductSpecification specification = new ProductSpecification();
         specification.setProduct(product);
         specification.setName(specificationDto.getName());
-        specification.setValue(specificationDto.getValue());
+        specification.setSpecValue(specificationDto.getSpecValue());
 
         return convertToDto(specificationRepository.save(specification));
     }
@@ -54,7 +54,7 @@ public class ProductSpecificationService {
         }
 
         specification.setName(specificationDto.getName());
-        specification.setValue(specificationDto.getValue());
+        specification.setSpecValue(specificationDto.getSpecValue());
 
         return convertToDto(specificationRepository.save(specification));
     }
@@ -77,7 +77,7 @@ public class ProductSpecificationService {
         dto.setId(specification.getId());
         dto.setProductId(specification.getProduct().getId());
         dto.setName(specification.getName());
-        dto.setValue(specification.getValue());
+        dto.setSpecValue(specification.getSpecValue());
         dto.setCreatedAt(specification.getCreatedAt());
         dto.setUpdatedAt(specification.getUpdatedAt());
         return dto;

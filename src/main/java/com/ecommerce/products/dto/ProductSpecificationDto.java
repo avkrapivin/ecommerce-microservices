@@ -11,7 +11,7 @@ public class ProductSpecificationDto {
     @NotBlank(message = "Specification name is required")
     private String name;
     @NotBlank(message = "Specification value is required")
-    private String value;
+    private String specValue;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 } 

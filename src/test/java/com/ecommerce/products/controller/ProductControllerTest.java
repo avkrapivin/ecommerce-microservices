@@ -6,7 +6,11 @@ import com.ecommerce.products.dto.UpdateProductDto;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
 
 import java.math.BigDecimal;
 
@@ -14,10 +18,17 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 import static org.junit.jupiter.api.Assertions.*;
 
+@SpringBootTest
+@ActiveProfiles("test")
+@EnableAutoConfiguration(exclude = {
+    org.springframework.boot.autoconfigure.security.oauth2.client.servlet.OAuth2ClientAutoConfiguration.class,
+    org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration.class
+})
 class ProductControllerTest extends ProductIntegrationTest {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Test
+    @WithMockUser(username = "user", roles = {"USER"})
     void getProductById_ShouldReturnProduct() throws Exception {
         mockMvc.perform(get("/products/{id}", testProduct.getId()))
                 .andExpect(status().isOk())
@@ -27,6 +38,7 @@ class ProductControllerTest extends ProductIntegrationTest {
     }
 
     @Test
+    @WithMockUser(username = "admin", roles = {"ADMIN"})
     void createProduct_ShouldCreateNewProduct() throws Exception {
         CreateProductDto createProductDto = new CreateProductDto();
         createProductDto.setName("New Product");
@@ -34,6 +46,7 @@ class ProductControllerTest extends ProductIntegrationTest {
         createProductDto.setPrice(BigDecimal.valueOf(200.00));
         createProductDto.setStockQuantity(20);
         createProductDto.setCategoryId(testCategory.getId());
+        createProductDto.setSku("test-sku-3");
 
         MvcResult result = mockMvc.perform(post("/products")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -47,6 +60,7 @@ class ProductControllerTest extends ProductIntegrationTest {
     }
 
     @Test
+    @WithMockUser(username = "admin", roles = {"ADMIN"})
     void updateProduct_ShouldUpdateProduct() throws Exception {
         UpdateProductDto updateProductDto = new UpdateProductDto();
         updateProductDto.setName("Updated Product");
@@ -55,6 +69,7 @@ class ProductControllerTest extends ProductIntegrationTest {
         updateProductDto.setStockQuantity(15);
         updateProductDto.setCategoryId(testCategory.getId());
         updateProductDto.setActive(true);
+        updateProductDto.setSku("test-sku-3");
 
         mockMvc.perform(put("/products/{id}", testProduct.getId())
                 .contentType(MediaType.APPLICATION_JSON)
@@ -65,6 +80,7 @@ class ProductControllerTest extends ProductIntegrationTest {
     }
 
     @Test
+    @WithMockUser(username = "admin", roles = {"ADMIN"})
     void deleteProduct_ShouldDeleteProduct() throws Exception {
         mockMvc.perform(delete("/products/{id}", testProduct.getId()))
                 .andExpect(status().isOk());
@@ -74,6 +90,7 @@ class ProductControllerTest extends ProductIntegrationTest {
     }
 
     @Test
+    @WithMockUser(username = "user", roles = {"USER"})
     void getProducts_ShouldReturnFilteredProducts() throws Exception {
         mockMvc.perform(get("/products")
                 .param("categoryId", testCategory.getId().toString())

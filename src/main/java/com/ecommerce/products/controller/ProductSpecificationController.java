@@ -1,5 +1,6 @@
 package com.ecommerce.products.controller;
 
+import com.ecommerce.products.dto.CreateProductSpecificationDto;
 import com.ecommerce.products.dto.ProductSpecificationDto;
 import com.ecommerce.products.service.ProductSpecificationService;
 import lombok.RequiredArgsConstructor;

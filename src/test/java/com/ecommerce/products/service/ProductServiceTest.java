@@ -5,15 +5,24 @@ import com.ecommerce.products.dto.CreateProductDto;
 import com.ecommerce.products.dto.ProductDto;
 import com.ecommerce.products.dto.ProductFilterDto;
 import com.ecommerce.products.dto.UpdateProductDto;
-import com.ecommerce.products.exception.ResourceNotFoundException;
+import com.ecommerce.common.exception.ResourceNotFoundException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.data.domain.Page;
 
 import java.math.BigDecimal;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+@SpringBootTest
+@ActiveProfiles("test")
+@EnableAutoConfiguration(exclude = {
+    org.springframework.boot.autoconfigure.security.oauth2.client.servlet.OAuth2ClientAutoConfiguration.class,
+    org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration.class
+})
 class ProductServiceTest extends ProductIntegrationTest {
     @Autowired
     private ProductService productService;
@@ -24,7 +33,7 @@ class ProductServiceTest extends ProductIntegrationTest {
         
         assertNotNull(product);
         assertEquals(testProduct.getName(), product.getName());
-        assertEquals(testProduct.getPrice(), product.getPrice());
+        assertEquals(testProduct.getPrice().doubleValue(), product.getPrice().doubleValue());
     }
 
     @Test
@@ -35,6 +44,7 @@ class ProductServiceTest extends ProductIntegrationTest {
         createProductDto.setPrice(BigDecimal.valueOf(200.00));
         createProductDto.setStockQuantity(20);
         createProductDto.setCategoryId(testCategory.getId());
+        createProductDto.setSku("test-sku-2");
 
         ProductDto createdProduct = productService.createProduct(createProductDto);
 
@@ -52,6 +62,7 @@ class ProductServiceTest extends ProductIntegrationTest {
         updateProductDto.setStockQuantity(15);
         updateProductDto.setCategoryId(testCategory.getId());
         updateProductDto.setActive(true);
+        updateProductDto.setSku("test-sku-2");
 
         ProductDto updatedProduct = productService.updateProduct(testProduct.getId(), updateProductDto);
 

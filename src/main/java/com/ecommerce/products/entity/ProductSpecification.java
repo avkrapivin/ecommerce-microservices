@@ -16,11 +16,11 @@ public class ProductSpecification {
     @JoinColumn(name = "product_id", nullable = false)
     private Product product;
 
-    @Column(nullable = false)
+    @Column(name = "spec_name", nullable = false)
     private String name;
 
-    @Column(nullable = false)
-    private String value;
+    @Column(name = "spec_value", nullable = false)
+    private String specValue;
 
     @Column(nullable = false)
     private Integer displayOrder;

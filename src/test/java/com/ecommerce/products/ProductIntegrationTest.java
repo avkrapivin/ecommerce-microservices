@@ -8,6 +8,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -49,6 +50,7 @@ public class ProductIntegrationTest {
         testProduct.setStockQuantity(10);
         testProduct.setCategory(testCategory);
         testProduct.setActive(true);
+        testProduct.setSku("test-sku");
         testProduct = productRepository.save(testProduct);
     }
 } 
