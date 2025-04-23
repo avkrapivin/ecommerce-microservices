@@ -100,10 +100,9 @@ public class ProductService {
     @Transactional
     @CacheEvict(value = "products", allEntries = true)
     public void deleteProduct(Long id) {
-        if (!productRepository.existsById(id)) {
-            throw new ResourceNotFoundException("Product not found with id: " + id);
-        }
-        productRepository.deleteById(id);
+        Product product = productRepository.findById(id)
+            .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + id));
+        productRepository.delete(product);
     }
 
     private ProductDto convertToDto(Product product) {

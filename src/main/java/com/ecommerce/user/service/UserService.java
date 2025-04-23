@@ -63,11 +63,11 @@ public class UserService {
 
     @Transactional
     public String confirmRegistration(String email, String confirmationCode) {
-        try {
-            cognitoService.confirmUser(email, confirmationCode);
-            
+        try {                        
             User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new UserNotFoundException("User not found with email: " + email));
+            
+            cognitoService.confirmUser(email, confirmationCode);
             
             user.setEnabled(true);
             userRepository.save(user);
