@@ -105,7 +105,13 @@ public class ProductService {
         productRepository.delete(product);
     }
 
-    private ProductDto convertToDto(Product product) {
+    @Transactional(readOnly = true)
+    public Product getProductEntityById(Long id) {
+        return productRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + id));
+    }
+
+    public ProductDto convertToDto(Product product) {
         ProductDto dto = new ProductDto();
         dto.setId(product.getId());
         dto.setName(product.getName());
