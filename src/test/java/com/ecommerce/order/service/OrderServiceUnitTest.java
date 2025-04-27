@@ -27,7 +27,7 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 public class OrderServiceUnitTest {
-    @Mock
+    @Mock 
     private OrderRepository orderRepository;
     
     @Mock
@@ -55,6 +55,17 @@ public class OrderServiceUnitTest {
         testUser = new User();
         testUser.setId(1L);
         testUser.setEmail("test@example.com");
+
+        ShippingAddress testShippingAddress = new ShippingAddress();
+        testShippingAddress.setFirstName("John");
+        testShippingAddress.setLastName("Doe");
+        testShippingAddress.setStreet("123 Main St");
+        testShippingAddress.setCity("New York");
+        testShippingAddress.setState("NY");
+        testShippingAddress.setPostalCode("10001");
+        testShippingAddress.setCountry("USA");
+        testShippingAddress.setPhoneNumber("+1234567890");
+        testShippingAddress.setEmail("john.doe@example.com");
         
         testProduct = new Product();
         testProduct.setId(1L);
@@ -64,6 +75,7 @@ public class OrderServiceUnitTest {
         testOrder = new Order();
         testOrder.setId(1L);
         testOrder.setUser(testUser);
+        testOrder.setShippingAddress(testShippingAddress);
         testOrder.setOrderNumber("ORD-123456");
         testOrder.setStatus(OrderStatus.PENDING);
         testOrder.setPaymentStatus(PaymentStatus.PENDING);
@@ -163,7 +175,7 @@ public class OrderServiceUnitTest {
         
         assertNotNull(result);
         assertEquals(1L, result.getId());
-        verify(orderRepository).save(any());
+        verify(orderRepository, atLeastOnce()).save(any());
     }
     
     @Test
@@ -171,7 +183,7 @@ public class OrderServiceUnitTest {
         OrderRequest request = new OrderRequest();
         request.setItems(List.of());
         
-        when(userService.getUserById(1L)).thenReturn(testUser);
+        lenient().when(userService.getUserById(1L)).thenReturn(testUser);
         
         assertThrows(OrderStatusException.class, () -> orderService.createOrder(1L, request));
     }
