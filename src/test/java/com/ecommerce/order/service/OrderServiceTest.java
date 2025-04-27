@@ -7,8 +7,11 @@ import com.ecommerce.order.dto.*;
 import com.ecommerce.order.entity.*;
 import com.ecommerce.order.repository.OrderItemRepository;
 import com.ecommerce.order.repository.OrderRepository;
+import com.ecommerce.products.dto.ProductDto;
+import com.ecommerce.products.dto.UpdateProductDto;
 import com.ecommerce.products.entity.Product;
 import com.ecommerce.products.service.ProductService;
+import com.ecommerce.products.service.ProductReservationService;
 import com.ecommerce.user.entity.User;
 import com.ecommerce.user.service.UserService;
 import org.junit.jupiter.api.BeforeEach;
@@ -26,6 +29,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @SpringBootTest
@@ -43,6 +47,9 @@ public class OrderServiceTest extends OrderIntegrationTest {
     private OrderRepository orderRepository;
 
     @MockBean
+    private OrderItemRepository orderItemRepository;
+
+    @MockBean
     private UserService userService;
 
     @MockBean
@@ -51,14 +58,20 @@ public class OrderServiceTest extends OrderIntegrationTest {
     @MockBean
     private OrderCalculationService calculationService;
 
+    @MockBean
+    private ProductReservationService productReservationService;
+
     private Order testOrder;
     private User testUser;
     private ShippingAddress testShippingAddress;
+    private Product testProduct;
+    private OrderItem testOrderItem;
 
     @BeforeEach
     void setUpTestData() {
         testUser = new User();
         testUser.setId(1L);
+        testUser.setEmail("test@example.com");
 
         testShippingAddress = new ShippingAddress();
         testShippingAddress.setId(1L);
@@ -72,6 +85,18 @@ public class OrderServiceTest extends OrderIntegrationTest {
         testShippingAddress.setPhoneNumber("+1234567890");
         testShippingAddress.setEmail("john.doe@example.com");
 
+        testProduct = new Product();
+        testProduct.setId(1L);
+        testProduct.setName("Test Product");
+        testProduct.setPrice(BigDecimal.valueOf(100.0));
+        testProduct.setStockQuantity(10);
+
+        testOrderItem = new OrderItem();
+        testOrderItem.setId(1L);
+        testOrderItem.setProduct(testProduct);
+        testOrderItem.setQuantity(1);
+        testOrderItem.setUnitPrice(testProduct.getPrice());
+
         testOrder = new Order();
         testOrder.setId(1L);
         testOrder.setUser(testUser);
@@ -83,6 +108,7 @@ public class OrderServiceTest extends OrderIntegrationTest {
         testOrder.setShippingCost(BigDecimal.ZERO);
         testOrder.setTax(BigDecimal.ZERO);
         testOrder.setTotal(BigDecimal.valueOf(100.0));
+        testOrder.setItems(List.of(testOrderItem));
     }
 
     private OrderItemRequest createOrderItemRequest(Long productId, int quantity) {
@@ -104,7 +130,7 @@ public class OrderServiceTest extends OrderIntegrationTest {
         shippingAddress.setPostalCode("10001");
         shippingAddress.setCountry("USA");
         shippingAddress.setPhoneNumber("+1234567890");
-        shippingAddress.setEmail("john.doe@example.com");
+        shippingAddress.setEmail("john@example.com");
         return shippingAddress;
     }
 
@@ -285,5 +311,69 @@ public class OrderServiceTest extends OrderIntegrationTest {
         when(orderRepository.findById(1L)).thenReturn(Optional.of(testOrder));
 
         assertThrows(OrderStatusException.class, () -> orderService.cancelOrder(1L));
+    }
+
+    @Test
+    void createOrder_ShouldCreateReservation() {
+        OrderRequest request = new OrderRequest();
+        request.setItems(List.of(createOrderItemRequest(testProduct.getId(), 1)));
+        request.setShippingAddress(createShippingAddressRequest());
+        
+        when(userService.getUserById(1L)).thenReturn(testUser);
+        when(productService.getProductEntityById(1L)).thenReturn(testProduct);
+        when(calculationService.calculateShippingCost(any())).thenReturn(BigDecimal.valueOf(10.0));
+        when(calculationService.calculateTax(any())).thenReturn(BigDecimal.valueOf(10.0));
+        when(calculationService.calculateTotal(any(), any(), any())).thenReturn(BigDecimal.valueOf(120.0));
+        when(orderRepository.save(any())).thenReturn(testOrder);
+        
+        OrderDto result = orderService.createOrder(1L, request);
+        
+        assertNotNull(result);
+        assertEquals(OrderStatus.PENDING, result.getStatus());
+        verify(productReservationService).reserveProduct(1L, 1L, 1);
+    }
+    
+    @Test
+    void updateOrderStatus_ShouldDeductStock_WhenConfirmed() {
+        UpdateOrderStatusDto updateDto = new UpdateOrderStatusDto();
+        updateDto.setStatus(OrderStatus.CONFIRMED);
+        
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(testOrder));
+        when(orderRepository.save(any())).thenReturn(testOrder);
+        when(productService.updateProduct(eq(1L), any(UpdateProductDto.class))).thenReturn(new ProductDto());
+        
+        OrderDto result = orderService.updateOrderStatus(1L, updateDto);
+        
+        assertNotNull(result);
+        assertEquals(OrderStatus.CONFIRMED, result.getStatus());
+        verify(productService).updateProduct(eq(1L), any(UpdateProductDto.class));
+        verify(productReservationService).releaseReservationsForOrder(testProduct, testUser);
+    }
+    
+    @Test
+    void updateOrderStatus_ShouldThrowException_WhenInsufficientStock() {
+        UpdateOrderStatusDto updateDto = new UpdateOrderStatusDto();
+        updateDto.setStatus(OrderStatus.CONFIRMED);
+        
+        testProduct.setStockQuantity(0);
+        
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(testOrder));
+        
+        assertThrows(OrderStatusException.class, () ->
+            orderService.updateOrderStatus(1L, updateDto)
+        );
+        
+        verify(productService, never()).updateProduct(any(), any());
+        verify(productReservationService, never()).releaseReservationsForOrder(any(), any());
+    }
+    
+    @Test
+    void cancelOrder_ShouldReleaseReservations() {
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(testOrder));
+        
+        orderService.cancelOrder(1L);
+        
+        verify(productReservationService).releaseReservationsForOrder(testProduct, testUser);
+        assertEquals(OrderStatus.CANCELLED, testOrder.getStatus());
     }
 }

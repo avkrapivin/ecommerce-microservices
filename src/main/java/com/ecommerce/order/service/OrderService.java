@@ -4,8 +4,10 @@ import com.ecommerce.order.dto.*;
 import com.ecommerce.order.entity.*;
 import com.ecommerce.order.repository.OrderItemRepository;
 import com.ecommerce.order.repository.OrderRepository;
+import com.ecommerce.products.dto.UpdateProductDto;
 import com.ecommerce.products.entity.Product;
 import com.ecommerce.products.service.ProductService;
+import com.ecommerce.products.service.ProductReservationService;
 import com.ecommerce.user.entity.User;
 import com.ecommerce.user.service.UserService;
 import com.ecommerce.common.exception.ResourceNotFoundException;
@@ -29,6 +31,7 @@ public class OrderService {
     private final UserService userService;
     private final ProductService productService;
     private final OrderCalculationService calculationService;
+    private final ProductReservationService productReservationService;
 
     @Transactional(readOnly = true)
     @Cacheable(value = "orders", key = "#orderId")
@@ -83,6 +86,9 @@ public class OrderService {
                 throw new OrderStatusException("Product price must be positive");
             }
             
+            // Проверяем резервирование
+            productReservationService.reserveProduct(product.getId(), userId, itemRequest.getQuantity());
+            
             OrderItem orderItem = new OrderItem();
             orderItem.setProduct(product);
             orderItem.setQuantity(itemRequest.getQuantity());
@@ -117,6 +123,25 @@ public class OrderService {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found with id: " + orderId));
         
+        // Если заказ переходит в статус CONFIRMED, списываем товары с остатка
+        if (updateDto.getStatus() == OrderStatus.CONFIRMED && order.getStatus() != OrderStatus.CONFIRMED) {
+            for (OrderItem item : order.getItems()) {
+                Product product = item.getProduct();
+                int newQuantity = product.getStockQuantity() - item.getQuantity();
+                if (newQuantity < 0) {
+                    throw new OrderStatusException("Not enough stock for product: " + product.getName());
+                }
+                
+                // Создаем DTO для обновления
+                UpdateProductDto updateProductDto = new UpdateProductDto();
+                updateProductDto.setStockQuantity(newQuantity);
+                productService.updateProduct(product.getId(), updateProductDto);
+                
+                // Освобождаем резервирование после списания
+                productReservationService.releaseReservationsForOrder(product, order.getUser());
+            }
+        }
+        
         order.setStatus(updateDto.getStatus());
         if (updateDto.getPaymentStatus() != null) {
             order.setPaymentStatus(updateDto.getPaymentStatus());
@@ -136,6 +161,11 @@ public class OrderService {
         
         if (order.getStatus() != OrderStatus.PENDING) {
             throw new OrderStatusException("Only pending orders can be cancelled");
+        }
+        
+        // Освобождаем резервирования для каждого товара в заказе
+        for (OrderItem item : order.getItems()) {
+            productReservationService.releaseReservationsForOrder(item.getProduct(), order.getUser());
         }
         
         order.setStatus(OrderStatus.CANCELLED);
