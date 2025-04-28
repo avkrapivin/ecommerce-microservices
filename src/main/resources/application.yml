@@ -69,3 +69,9 @@ app:
     redirect-url: http://localhost:3000/auth/signout
   upload:
     dir: ${UPLOAD_DIR:./uploads}
+
+paypal:
+  client:
+    id: ${PAYPAL_CLIENT_ID}
+    secret: ${PAYPAL_CLIENT_SECRET}
+  mode: sandbox # или production для продакшена

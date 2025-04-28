@@ -18,6 +18,12 @@ spring:
       hibernate:
         format_sql: true
 
+paypal:
+  client:
+    id: test-client-id
+    secret: test-client-secret
+  mode: sandbox
+
 logging:
   level:
     com.ecommerce: DEBUG
