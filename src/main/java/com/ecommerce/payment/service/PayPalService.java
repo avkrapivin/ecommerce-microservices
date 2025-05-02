@@ -14,8 +14,12 @@ import java.util.List;
 @Service
 public class PayPalService {
 
-    @Autowired
     private APIContext apiContext;
+
+    @Autowired
+    public void setApiContext(APIContext apiContext) {
+        this.apiContext = apiContext;
+    }
 
     public Payment createPayment(
             Double total,
