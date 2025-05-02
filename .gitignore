@@ -35,3 +35,5 @@ build/
 ### Environment Variables ###
 /src/test/resources/.env.test
 .env.test
+/src/main/resources/.env
+.env
