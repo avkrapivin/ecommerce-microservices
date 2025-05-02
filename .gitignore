@@ -33,5 +33,6 @@ build/
 .vscode/
 
 ### Environment Variables ###
+/src/test/resources/.env.test
 .env.test
 .env 
