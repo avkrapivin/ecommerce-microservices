@@ -4,6 +4,8 @@ import com.ecommerce.order.dto.OrderDto;
 import com.ecommerce.order.dto.OrderRequest;
 import com.ecommerce.order.dto.UpdateOrderStatusDto;
 import com.ecommerce.order.service.OrderService;
+import com.ecommerce.payment.dto.PayPalPaymentResponse;
+import com.paypal.base.rest.PayPalRESTException;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -52,6 +54,35 @@ public class OrderController {
     @PostMapping("/{orderId}/cancel")
     public ResponseEntity<Void> cancelOrder(@PathVariable Long orderId) {
         orderService.cancelOrder(orderId);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/{orderId}/payment")
+    public ResponseEntity<PayPalPaymentResponse> createPayment(@PathVariable Long orderId) {
+        try {
+            PayPalPaymentResponse response = orderService.createPayment(orderId);
+            return ResponseEntity.ok(response);
+        } catch (PayPalRESTException e) {
+            return ResponseEntity.badRequest().body(PayPalPaymentResponse.error(e.getMessage()));
+        }
+    }
+
+    @GetMapping("/payment/success")
+    public ResponseEntity<Void> handlePaymentSuccess(
+            @RequestParam("paymentId") String paymentId,
+            @RequestParam("PayerID") String payerId) {
+        try {
+            orderService.processSuccessfulPayment(paymentId, payerId);
+            return ResponseEntity.ok().build();
+        } catch (PayPalRESTException e) {
+            orderService.handlePaymentFailure(paymentId, e.getMessage());
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    @GetMapping("/payment/cancel")
+    public ResponseEntity<Void> handlePaymentCancellation(@RequestParam("paymentId") String paymentId) {
+        orderService.handlePaymentCancellation(paymentId);
         return ResponseEntity.ok().build();
     }
 } 

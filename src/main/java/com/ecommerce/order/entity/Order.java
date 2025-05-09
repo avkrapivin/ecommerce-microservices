@@ -55,6 +55,18 @@ public class Order {
     private String paymentId;
 
     @Column
+    private String payerId;
+
+    @Column
+    private String paymentMethod;
+
+    @Column
+    private LocalDateTime paymentDate;
+
+    @Column
+    private String paymentError;
+
+    @Column
     private String trackingNumber;
 
     @Column(nullable = false)

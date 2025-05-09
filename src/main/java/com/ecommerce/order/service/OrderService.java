@@ -4,6 +4,8 @@ import com.ecommerce.order.dto.*;
 import com.ecommerce.order.entity.*;
 import com.ecommerce.order.repository.OrderItemRepository;
 import com.ecommerce.order.repository.OrderRepository;
+import com.ecommerce.payment.dto.PayPalPaymentResponse;
+import com.ecommerce.payment.service.PayPalService;
 import com.ecommerce.products.dto.UpdateProductDto;
 import com.ecommerce.products.entity.Product;
 import com.ecommerce.products.service.ProductService;
@@ -12,6 +14,8 @@ import com.ecommerce.user.entity.User;
 import com.ecommerce.user.service.UserService;
 import com.ecommerce.common.exception.ResourceNotFoundException;
 import com.ecommerce.common.exception.OrderStatusException;
+import com.paypal.api.payments.Payment;
+import com.paypal.base.rest.PayPalRESTException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
@@ -19,6 +23,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -32,6 +37,7 @@ public class OrderService {
     private final ProductService productService;
     private final OrderCalculationService calculationService;
     private final ProductReservationService productReservationService;
+    private final PayPalService payPalService;
 
     @Transactional(readOnly = true)
     @Cacheable(value = "orders", key = "#orderId")
@@ -172,6 +178,97 @@ public class OrderService {
         orderRepository.save(order);
     }
 
+    @Transactional
+    @CacheEvict(value = "orders", key = "#orderId")
+    public PayPalPaymentResponse createPayment(Long orderId) throws PayPalRESTException {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found with id: " + orderId));
+
+        if (order.getPaymentStatus() != PaymentStatus.PENDING) {
+            throw new OrderStatusException("Order is not in pending payment status");
+        }
+
+        if (order.getPaymentId() != null) {
+            throw new OrderStatusException("Payment already initiated for this order");
+        }
+
+        Payment payment = payPalService.createPayment(
+                order.getTotal().doubleValue(),
+                "USD",
+                "paypal",
+                "sale",
+                "Order #" + order.getOrderNumber(),
+                "http://localhost:3000/orders/payment/cancel",
+                "http://localhost:3000/orders/payment/success"
+        );
+
+        // Сохраняем информацию о платеже
+        order.setPaymentId(payment.getId());
+        order.setPaymentMethod("PAYPAL");
+        order.setPaymentStatus(PaymentStatus.PROCESSING);
+        orderRepository.save(order);
+
+        return PayPalPaymentResponse.success(payment);
+    }
+
+    @Transactional
+    @CacheEvict(value = "orders", key = "#orderId")
+    public void processSuccessfulPayment(String paymentId, String payerId) throws PayPalRESTException {
+        Order order = orderRepository.findByPaymentId(paymentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found for payment: " + paymentId));
+
+        Payment payment = payPalService.executePayment(paymentId, payerId);
+        
+        if (payment.getState().equals("approved")) {
+            order.setPayerId(payerId);
+            order.setPaymentDate(LocalDateTime.now());
+            order.setPaymentStatus(PaymentStatus.COMPLETED);
+            order.setStatus(OrderStatus.CONFIRMED);
+            
+            // Списываем товары с остатка
+            for (OrderItem item : order.getItems()) {
+                Product product = item.getProduct();
+                int newQuantity = product.getStockQuantity() - item.getQuantity();
+                if (newQuantity < 0) {
+                    throw new OrderStatusException("Not enough stock for product: " + product.getName());
+                }
+                
+                UpdateProductDto updateProductDto = new UpdateProductDto();
+                updateProductDto.setStockQuantity(newQuantity);
+                productService.updateProduct(product.getId(), updateProductDto);
+                
+                productReservationService.releaseReservationsForOrder(product, order.getUser());
+            }
+        } else {
+            order.setPaymentStatus(PaymentStatus.FAILED);
+            order.setPaymentError("Payment was not approved: " + payment.getState());
+        }
+        
+        orderRepository.save(order);
+    }
+
+    @Transactional
+    @CacheEvict(value = "orders", key = "#orderId")
+    public void handlePaymentFailure(String paymentId, String errorMessage) {
+        Order order = orderRepository.findByPaymentId(paymentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found for payment: " + paymentId));
+
+        order.setPaymentStatus(PaymentStatus.FAILED);
+        order.setPaymentError(errorMessage);
+        orderRepository.save(order);
+    }
+
+    @Transactional
+    @CacheEvict(value = "orders", key = "#orderId")
+    public void handlePaymentCancellation(String paymentId) {
+        Order order = orderRepository.findByPaymentId(paymentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found for payment: " + paymentId));
+
+        order.setPaymentStatus(PaymentStatus.FAILED);
+        order.setPaymentError("Payment was cancelled by user");
+        orderRepository.save(order);
+    }
+
     private String generateOrderNumber() {
         return "ORD-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
     }
@@ -191,6 +288,10 @@ public class OrderService {
         dto.setTax(order.getTax());
         dto.setTotal(order.getTotal());
         dto.setPaymentId(order.getPaymentId());
+        dto.setPayerId(order.getPayerId());
+        dto.setPaymentMethod(order.getPaymentMethod());
+        dto.setPaymentDate(order.getPaymentDate());
+        dto.setPaymentError(order.getPaymentError());
         dto.setTrackingNumber(order.getTrackingNumber());
         dto.setCreatedAt(order.getCreatedAt());
         dto.setUpdatedAt(order.getUpdatedAt());

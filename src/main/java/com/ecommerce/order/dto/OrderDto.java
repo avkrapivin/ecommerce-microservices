@@ -23,6 +23,10 @@ public class OrderDto {
     private BigDecimal tax;
     private BigDecimal total;
     private String paymentId;
+    private String payerId;
+    private String paymentMethod;
+    private LocalDateTime paymentDate;
+    private String paymentError;
     private String trackingNumber;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

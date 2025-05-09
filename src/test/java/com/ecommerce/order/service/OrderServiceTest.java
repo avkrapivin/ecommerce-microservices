@@ -14,6 +14,10 @@ import com.ecommerce.products.service.ProductService;
 import com.ecommerce.products.service.ProductReservationService;
 import com.ecommerce.user.entity.User;
 import com.ecommerce.user.service.UserService;
+import com.ecommerce.payment.dto.PayPalPaymentResponse;
+import com.ecommerce.payment.service.PayPalService;
+import com.paypal.api.payments.Payment;
+import com.paypal.base.rest.PayPalRESTException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,6 +28,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -61,11 +66,15 @@ public class OrderServiceTest extends OrderIntegrationTest {
     @MockBean
     private ProductReservationService productReservationService;
 
+    @MockBean
+    private PayPalService payPalService;
+
     private Order testOrder;
     private User testUser;
     private ShippingAddress testShippingAddress;
     private Product testProduct;
     private OrderItem testOrderItem;
+    private Payment payment;
 
     @BeforeEach
     void setUpTestData() {
@@ -375,5 +384,120 @@ public class OrderServiceTest extends OrderIntegrationTest {
         
         verify(productReservationService).releaseReservationsForOrder(testProduct, testUser);
         assertEquals(OrderStatus.CANCELLED, testOrder.getStatus());
+    }
+
+    @Test
+    void createPayment_Success() throws PayPalRESTException {
+        // Arrange
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(testOrder));
+        
+        Payment payment = new Payment();
+        payment.setId("PAY-123");
+        payment.setState("created");
+        when(payPalService.createPayment(
+            eq(testOrder.getTotal().doubleValue()),
+            eq("USD"),
+            eq("paypal"),
+            eq("sale"),
+            eq("Order #" + testOrder.getOrderNumber()),
+            eq("http://localhost:3000/orders/payment/cancel"),
+            eq("http://localhost:3000/orders/payment/success")
+        )).thenReturn(payment);
+
+        // Act
+        PayPalPaymentResponse response = orderService.createPayment(1L);
+
+        // Assert
+        assertNotNull(response);
+        assertEquals("PAY-123", response.getPaymentId());
+        verify(orderRepository, times(2)).save(any(Order.class));
+        assertEquals(PaymentStatus.PROCESSING, testOrder.getPaymentStatus());
+        assertNotNull(testOrder.getPaymentId());
+        assertEquals("PAYPAL", testOrder.getPaymentMethod());
+    }
+
+    @Test
+    void createPayment_OrderNotFound() {
+        // Arrange
+        when(orderRepository.findById(1L)).thenReturn(Optional.empty());
+
+        // Act & Assert
+        assertThrows(ResourceNotFoundException.class, () -> orderService.createPayment(1L));
+    }
+
+    @Test
+    void createPayment_InvalidStatus() {
+        // Arrange
+        testOrder.setPaymentStatus(PaymentStatus.COMPLETED);
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(testOrder));
+
+        // Act & Assert
+        assertThrows(OrderStatusException.class, () -> orderService.createPayment(1L));
+    }
+
+    @Test
+    void processSuccessfulPayment_Success() throws PayPalRESTException {
+        // Arrange
+        testOrder.setPaymentId("PAY-123");
+        when(orderRepository.findByPaymentId("PAY-123")).thenReturn(Optional.of(testOrder));
+        
+        Payment payment = new Payment();
+        payment.setState("approved");
+        when(payPalService.executePayment(any(), any())).thenReturn(payment);
+
+        // Act
+        orderService.processSuccessfulPayment("PAY-123", "PAYER-123");
+
+        // Assert
+        assertEquals(PaymentStatus.COMPLETED, testOrder.getPaymentStatus());
+        assertEquals(OrderStatus.CONFIRMED, testOrder.getStatus());
+        assertEquals("PAYER-123", testOrder.getPayerId());
+        assertNotNull(testOrder.getPaymentDate());
+    }
+
+    @Test
+    void processSuccessfulPayment_PaymentNotApproved() throws PayPalRESTException {
+        // Arrange
+        testOrder.setPaymentId("PAY-123");
+        when(orderRepository.findByPaymentId("PAY-123")).thenReturn(Optional.of(testOrder));
+        
+        Payment payment = new Payment();
+        payment.setState("failed");
+        when(payPalService.executePayment(any(), any())).thenReturn(payment);
+
+        // Act
+        orderService.processSuccessfulPayment("PAY-123", "PAYER-123");
+
+        // Assert
+        assertEquals(PaymentStatus.FAILED, testOrder.getPaymentStatus());
+        assertNotNull(testOrder.getPaymentError());
+    }
+
+    @Test
+    void handlePaymentFailure_Success() {
+        // Arrange
+        testOrder.setPaymentId("PAY-123");
+        when(orderRepository.findByPaymentId("PAY-123")).thenReturn(Optional.of(testOrder));
+
+        // Act
+        orderService.handlePaymentFailure("PAY-123", "Payment failed");
+
+        // Assert
+        assertEquals(PaymentStatus.FAILED, testOrder.getPaymentStatus());
+        assertEquals("Payment failed", testOrder.getPaymentError());
+    }
+
+    @Test
+    void handlePaymentCancellation_Success() {
+        // Arrange
+        testOrder.setPaymentId("PAY-123");
+        when(orderRepository.findByPaymentId("PAY-123")).thenReturn(Optional.of(testOrder));
+
+        // Act
+        orderService.handlePaymentCancellation("PAY-123");
+
+        // Assert
+        assertEquals(PaymentStatus.FAILED, testOrder.getPaymentStatus());
+        assertEquals("Payment was cancelled by user", testOrder.getPaymentError());
     }
 }
