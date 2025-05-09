@@ -75,3 +75,7 @@ paypal:
     id: ${PAYPAL_CLIENT_ID}
     secret: ${PAYPAL_CLIENT_SECRET}
   mode: sandbox # или production для продакшена
+
+shippo:
+  api:
+    key: ${SHIPPO_API_KEY}
