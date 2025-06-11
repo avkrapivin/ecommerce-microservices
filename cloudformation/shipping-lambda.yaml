@@ -75,6 +75,47 @@ Resources:
     Properties:
       TopicName: !Sub ${Environment}-OrderStatusUpdated
 
+  OrderReadyForDeliveryFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${Environment}-order-ready-for-delivery
+      CodeUri: ../shipping-lambda
+      Handler: com.ecommerce.lambda.OrderReadyForDeliveryHandler::handleRequest
+      Runtime: java17
+      Timeout: 30
+      MemorySize: 256
+      Environment:
+        Variables:
+          ORDER_READY_FOR_DELIVERY_TOPIC_ARN: !Ref OrderReadyForDeliveryTopic
+      Policies:
+        - SNSPublishMessagePolicy:
+            TopicName: !GetAtt OrderReadyForDeliveryTopic.TopicName
+      Events:
+        PaymentCompletedEvent:
+          Type: SNS
+          Properties:
+            Topic: !Ref PaymentCompletedTopic
+
+  OrderReadyForDeliveryTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub ${Environment}-order-ready-for-delivery
+      DisplayName: Order Ready For Delivery Topic
+
+  OrderReadyForDeliveryTopicPolicy:
+    Type: AWS::SNS::TopicPolicy
+    Properties:
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: sns.amazonaws.com
+            Action: sns:Publish
+            Resource: !Ref OrderReadyForDeliveryTopic
+      Topics:
+        - !Ref OrderReadyForDeliveryTopic
+
 Outputs:
   OrderDispatcherFunction:
     Description: Order Dispatcher Lambda Function ARN
@@ -94,4 +135,12 @@ Outputs:
 
   OrderStatusUpdatedTopicArn:
     Description: Order Status Updated SNS Topic ARN
-    Value: !Ref OrderStatusUpdatedTopic 
+    Value: !Ref OrderStatusUpdatedTopic
+
+  OrderReadyForDeliveryFunction:
+    Description: Order Ready For Delivery Lambda Function ARN
+    Value: !GetAtt OrderReadyForDeliveryFunction.Arn
+
+  OrderReadyForDeliveryTopic:
+    Description: Order Ready For Delivery SNS Topic ARN
+    Value: !Ref OrderReadyForDeliveryTopic 

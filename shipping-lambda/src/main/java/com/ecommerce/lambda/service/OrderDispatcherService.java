@@ -1,6 +1,7 @@
 package com.ecommerce.lambda.service;
 
 import com.ecommerce.lambda.model.Order;
+import com.ecommerce.lambda.model.Order.OrderItem;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.paypal.api.payments.Payment;
 import lombok.extern.slf4j.Slf4j;
