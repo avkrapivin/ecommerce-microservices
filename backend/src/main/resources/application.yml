@@ -1,0 +1,85 @@
+spring:
+  config:
+    import: optional:classpath:.env
+  datasource:
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: https://cognito-idp.${AWS_REGION:us-east-1}.amazonaws.com/${COGNITO_USER_POOL_ID}
+          jwk-set-uri: https://cognito-idp.${AWS_REGION:us-east-1}.amazonaws.com/${COGNITO_USER_POOL_ID}/.well-known/jwks.json
+      client:
+        registration:
+          cognito:
+            client-id: ${COGNITO_CLIENT_ID}
+            client-secret: ${COGNITO_CLIENT_SECRET}
+            authorization-grant-type: authorization_code
+            redirect-uri: http://localhost:3000/auth/callback
+            scope: openid,email,profile
+        provider:
+          cognito:
+            issuer-uri: https://cognito-idp.${AWS_REGION:us-east-1}.amazonaws.com/${COGNITO_USER_POOL_ID}
+            user-name-attribute: sub
+  cache:
+    type: caffeine
+    caffeine:
+      spec: maximumSize=500,expireAfterWrite=3600s
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+
+aws:
+  region: ${AWS_REGION:us-east-1}
+  accountId: ${AWS_ACCOUNT_ID:820242910367}
+  s3:
+    bucket-name: ${AWS_S3_BUCKET_NAME}
+    access-key-id: ${AWS_S3_ACCESS_KEY_ID}
+    secret-access-key: ${AWS_S3_SECRET_ACCESS_KEY}
+  cognito:
+    user-pool-id: ${COGNITO_USER_POOL_ID}
+    client-id: ${COGNITO_CLIENT_ID}
+    client-secret: ${COGNITO_CLIENT_SECRET}
+  sns:
+    order-unconfirmed-topic-name: OrderUnconfirmed
+
+  
+server:
+  port: ${SERVER_PORT:8080}
+  servlet:
+    context-path: /api
+
+logging:
+  level:
+    com.ecommerce: DEBUG
+    org.springframework: INFO
+    org.springframework.security: DEBUG
+    software.amazon.awssdk: DEBUG
+
+app:
+  logout:
+    redirect-url: http://localhost:3000/auth/signout
+  upload:
+    dir: ${UPLOAD_DIR:./uploads}
+
+paypal:
+  client:
+    id: ${PAYPAL_CLIENT_ID}
+    secret: ${PAYPAL_CLIENT_SECRET}
+  mode: sandbox # или production для продакшена
+
+shippo:
+  api:
+    key: ${SHIPPO_API_KEY}
