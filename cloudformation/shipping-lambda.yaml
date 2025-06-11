@@ -1,0 +1,97 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+
+Description: Order Dispatcher Lambda Function
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues:
+      - dev
+      - prod
+  PayPalClientId:
+    Type: String
+    Description: PayPal Client ID
+  PayPalClientSecret:
+    Type: String
+    Description: PayPal Client Secret
+    NoEcho: true
+  PayPalMode:
+    Type: String
+    Default: sandbox
+    AllowedValues:
+      - sandbox
+      - live
+
+Resources:
+  OrderDispatcherFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../shipping-lambda/target/shipping-lambda-1.0-SNAPSHOT.jar
+      Handler: com.ecommerce.lambda.OrderDispatcherHandler::handleRequest
+      Runtime: java17
+      Timeout: 30
+      MemorySize: 256
+      Environment:
+        Variables:
+          AWS_REGION: !Ref AWS::Region
+          PAYMENT_COMPLETED_TOPIC_ARN: !Ref PaymentCompletedTopic
+          PAYMENT_SUSPICIOUS_TOPIC_ARN: !Ref PaymentSuspiciousTopic
+          ORDER_STATUS_UPDATED_TOPIC_ARN: !Ref OrderStatusUpdatedTopic
+          PAYPAL_CLIENT_ID: !Ref PayPalClientId
+          PAYPAL_CLIENT_SECRET: !Ref PayPalClientSecret
+          PAYPAL_MODE: !Ref PayPalMode
+      Policies:
+        - SNSPublishMessagePolicy:
+            TopicName: !GetAtt PaymentCompletedTopic.TopicName
+        - SNSPublishMessagePolicy:
+            TopicName: !GetAtt PaymentSuspiciousTopic.TopicName
+        - SNSPublishMessagePolicy:
+            TopicName: !GetAtt OrderStatusUpdatedTopic.TopicName
+      Events:
+        OrderUnconfirmedEvent:
+          Type: SNS
+          Properties:
+            Topic: !Ref OrderUnconfirmedTopic
+
+  PaymentCompletedTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub ${Environment}-PaymentCompleted
+
+  PaymentSuspiciousTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub ${Environment}-PaymentSuspicious
+
+  OrderUnconfirmedTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub ${Environment}-OrderUnconfirmed
+
+  OrderStatusUpdatedTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub ${Environment}-OrderStatusUpdated
+
+Outputs:
+  OrderDispatcherFunction:
+    Description: Order Dispatcher Lambda Function ARN
+    Value: !GetAtt OrderDispatcherFunction.Arn
+
+  PaymentCompletedTopicArn:
+    Description: Payment Completed SNS Topic ARN
+    Value: !Ref PaymentCompletedTopic
+
+  PaymentSuspiciousTopicArn:
+    Description: Payment Suspicious SNS Topic ARN
+    Value: !Ref PaymentSuspiciousTopic
+
+  OrderUnconfirmedTopicArn:
+    Description: Order Unconfirmed SNS Topic ARN
+    Value: !Ref OrderUnconfirmedTopic
+
+  OrderStatusUpdatedTopicArn:
+    Description: Order Status Updated SNS Topic ARN
+    Value: !Ref OrderStatusUpdatedTopic 
