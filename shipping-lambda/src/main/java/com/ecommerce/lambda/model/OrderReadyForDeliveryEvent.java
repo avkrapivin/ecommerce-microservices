@@ -5,15 +5,9 @@ import lombok.Data;
 
 @Data
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class PaymentCompletedEvent {
+public class OrderReadyForDeliveryEvent {
     private String orderId;
     private String orderNumber;
-    private String paymentId;
-    private String paymentStatus;
-    private String paymentMethod;
-    private String paymentDate;
-    
-    // Данные для доставки
     private String customerEmail;
     private String customerName;
     private String shippingAddress;

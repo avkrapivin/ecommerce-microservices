@@ -2,6 +2,7 @@ package com.ecommerce.lambda.service;
 
 import com.ecommerce.lambda.model.Order;
 import com.ecommerce.lambda.model.PaymentCompletedEvent;
+import com.ecommerce.lambda.model.OrderReadyForDeliveryEvent;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import software.amazon.awssdk.services.sns.SnsClient;
@@ -23,11 +24,32 @@ public class OrderDeliveryService {
         try {
             log.info("Preparing order {} for delivery", event.getOrderNumber());
 
-            // Здесь можно добавить дополнительную логику подготовки заказа
-            // Например, проверка наличия товаров, формирование упаковочного листа и т.д.
+            // Создаем событие OrderReadyForDelivery
+            OrderReadyForDeliveryEvent deliveryEvent = new OrderReadyForDeliveryEvent();
+            
+            // Копируем все поля из PaymentCompletedEvent
+            deliveryEvent.setOrderId(event.getOrderId());
+            deliveryEvent.setOrderNumber(event.getOrderNumber());
+            deliveryEvent.setCustomerEmail(event.getCustomerEmail());
+            deliveryEvent.setCustomerName(event.getCustomerName());
+            deliveryEvent.setShippingAddress(event.getShippingAddress());
+            deliveryEvent.setShippingCity(event.getShippingCity());
+            deliveryEvent.setShippingState(event.getShippingState());
+            deliveryEvent.setShippingZip(event.getShippingZip());
+            deliveryEvent.setShippingCountry(event.getShippingCountry());
+            deliveryEvent.setTotalAmount(event.getTotalAmount());
+            deliveryEvent.setCurrency(event.getCurrency());
+            
+            // Копируем параметры посылки
+            deliveryEvent.setParcelLength(event.getParcelLength());
+            deliveryEvent.setParcelWidth(event.getParcelWidth());
+            deliveryEvent.setParcelHeight(event.getParcelHeight());
+            deliveryEvent.setParcelDistanceUnit(event.getParcelDistanceUnit());
+            deliveryEvent.setParcelWeight(event.getParcelWeight());
+            deliveryEvent.setParcelMassUnit(event.getParcelMassUnit());
 
             // Публикуем событие о готовности заказа к доставке
-            String message = objectMapper.writeValueAsString(event);
+            String message = objectMapper.writeValueAsString(deliveryEvent);
             PublishRequest request = PublishRequest.builder()
                     .topicArn(orderReadyForDeliveryTopicArn)
                     .message(message)

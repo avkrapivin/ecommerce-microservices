@@ -2,6 +2,7 @@ package com.ecommerce.lambda.service;
 
 import com.ecommerce.lambda.model.Order;
 import com.ecommerce.lambda.model.Order.OrderItem;
+import com.ecommerce.lambda.model.PaymentCompletedEvent;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.paypal.api.payments.Payment;
 import lombok.extern.slf4j.Slf4j;
@@ -52,7 +53,32 @@ public class OrderDispatcherService {
                 Payment capturedPayment = payPalService.captureOrder(payment.getId(), payment.getPayer().getPayerInfo().getPayerId());
 
                 if (payPalService.isOrderApproved(capturedPayment)) {
-                    publishToSns(paymentCompletedTopicArn, orderJson);
+                    // Создаем событие PaymentCompleted с данными для доставки
+                    PaymentCompletedEvent paymentEvent = new PaymentCompletedEvent();
+                    paymentEvent.setOrderId(order.getId());
+                    paymentEvent.setOrderNumber(order.getOrderNumber());
+                    paymentEvent.setPaymentId(capturedPayment.getId());
+                    paymentEvent.setPaymentStatus(capturedPayment.getState());
+                    paymentEvent.setPaymentMethod("PAYPAL");
+                    paymentEvent.setPaymentDate(capturedPayment.getCreateTime());
+                    
+                    // Копируем данные для доставки
+                    paymentEvent.setCustomerEmail(order.getUserId());
+                    paymentEvent.setCustomerName(order.getShippingAddress().getStreet());
+                    paymentEvent.setShippingAddress(order.getShippingAddress().getStreet());
+                    paymentEvent.setShippingCity(order.getShippingAddress().getCity());
+                    paymentEvent.setShippingState(order.getShippingAddress().getState());
+                    paymentEvent.setShippingZip(order.getShippingAddress().getZipCode());
+                    paymentEvent.setShippingCountry(order.getShippingAddress().getCountry());
+                    paymentEvent.setTotalAmount(order.getTotal().doubleValue());
+                    paymentEvent.setCurrency("USD");
+                    
+                    // Рассчитываем параметры посылки
+                    calculateParcelDimensions(order, paymentEvent);
+                    
+                    // Публикуем событие
+                    String paymentEventJson = objectMapper.writeValueAsString(paymentEvent);
+                    publishToSns(paymentCompletedTopicArn, paymentEventJson);
                     publishOrderStatusUpdate(orderJson, "PAYMENT_COMPLETED");
                     log.info("Order {} payment completed", order.getId());
                 } else {
@@ -88,5 +114,30 @@ public class OrderDispatcherService {
         } catch (Exception e) {
             log.error("Failed to publish order status update: {}", e.getMessage(), e);
         }
+    }
+
+    private void calculateParcelDimensions(Order order, PaymentCompletedEvent event) {
+        // Простая логика расчета размеров посылки
+        // В реальном приложении здесь должна быть более сложная логика
+        double totalVolume = 0;
+        double totalWeight = 0;
+        
+        for (Order.OrderItem item : order.getItems()) {
+            // Предполагаем, что каждый товар имеет стандартные размеры
+            double itemVolume = 10 * 10 * 5; // 10x10x5 см
+            double itemWeight = 1.0; // 1 кг
+            
+            totalVolume += itemVolume * item.getQuantity();
+            totalWeight += itemWeight * item.getQuantity();
+        }
+        
+        // Рассчитываем размеры коробки
+        double side = Math.cbrt(totalVolume);
+        event.setParcelLength(side);
+        event.setParcelWidth(side);
+        event.setParcelHeight(side);
+        event.setParcelDistanceUnit("cm");
+        event.setParcelWeight(totalWeight);
+        event.setParcelMassUnit("kg");
     }
 } 

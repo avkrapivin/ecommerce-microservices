@@ -116,6 +116,55 @@ Resources:
       Topics:
         - !Ref OrderReadyForDeliveryTopic
 
+  ProcessDeliveryFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${Environment}-process-delivery
+      CodeUri: ../shipping-lambda
+      Handler: com.ecommerce.lambda.ProcessDeliveryHandler::handleRequest
+      Runtime: java17
+      Timeout: 30
+      MemorySize: 256
+      Environment:
+        Variables:
+          ORDER_STATUS_UPDATED_TOPIC_ARN: !Ref OrderStatusUpdatedTopic
+          SHIPPO_API_KEY: !Sub '{{resolve:secretsmanager:${Environment}/shippo:SecretString:apiKey}}'
+          SHIPPO_FROM_NAME: !Sub '{{resolve:secretsmanager:${Environment}/shippo:SecretString:fromName}}'
+          SHIPPO_FROM_STREET: !Sub '{{resolve:secretsmanager:${Environment}/shippo:SecretString:fromStreet}}'
+          SHIPPO_FROM_CITY: !Sub '{{resolve:secretsmanager:${Environment}/shippo:SecretString:fromCity}}'
+          SHIPPO_FROM_STATE: !Sub '{{resolve:secretsmanager:${Environment}/shippo:SecretString:fromState}}'
+          SHIPPO_FROM_ZIP: !Sub '{{resolve:secretsmanager:${Environment}/shippo:SecretString:fromZip}}'
+          SHIPPO_FROM_COUNTRY: !Sub '{{resolve:secretsmanager:${Environment}/shippo:SecretString:fromCountry}}'
+          SHIPPO_FROM_PHONE: !Sub '{{resolve:secretsmanager:${Environment}/shippo:SecretString:fromPhone}}'
+      Policies:
+        - SNSPublishMessagePolicy:
+            TopicName: !GetAtt OrderStatusUpdatedTopic.TopicName
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - secretsmanager:GetSecretValue
+              Resource: !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${Environment}/shippo-*'
+      Events:
+        OrderReadyForDeliveryEvent:
+          Type: SNS
+          Properties:
+            Topic: !Ref OrderReadyForDeliveryTopic
+
+  OrderStatusUpdatedTopicPolicy:
+    Type: AWS::SNS::TopicPolicy
+    Properties:
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: sns.amazonaws.com
+            Action: sns:Publish
+            Resource: !Ref OrderStatusUpdatedTopic
+      Topics:
+        - !Ref OrderStatusUpdatedTopic
+
 Outputs:
   OrderDispatcherFunction:
     Description: Order Dispatcher Lambda Function ARN
@@ -143,4 +192,8 @@ Outputs:
 
   OrderReadyForDeliveryTopic:
     Description: Order Ready For Delivery SNS Topic ARN
-    Value: !Ref OrderReadyForDeliveryTopic 
+    Value: !Ref OrderReadyForDeliveryTopic
+
+  ProcessDeliveryFunction:
+    Description: Process Delivery Lambda Function ARN
+    Value: !GetAtt ProcessDeliveryFunction.Arn 
