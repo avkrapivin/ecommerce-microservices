@@ -48,18 +48,34 @@ public class AwsConfig {
                 .build();
     }
 
+    @Bean
+    public SnsClient snsClient() {
+        log.info("Creating SNS client for region: {}", region);
+        return SnsClient.builder()
+                .region(Region.of(region))
+                .build();
+    }
+
     @Profile("!test")
     @Bean
     public String orderUnconfirmedTopicArn(SnsClient snsClient) {
+        String topicName = "OrderUnconfirmed";
+        String topicArn = "arn:aws:sns:" + region + ":" + accountId + ":" + topicName;
+        
         try {
+            // Пробуем получить атрибуты топика
             GetTopicAttributesRequest request = GetTopicAttributesRequest.builder()
-                    .topicArn("arn:aws:sns:" + region + ":" + accountId + ":OrderUnconfirmed")
+                    .topicArn(topicArn)
                     .build();
             
-            GetTopicAttributesResponse response = snsClient.getTopicAttributes(request);
-            return response.attributes().get("TopicArn");
+            snsClient.getTopicAttributes(request);
+            log.info("SNS topic {} already exists", topicName);
+            return topicArn;
         } catch (Exception e) {
-            throw new RuntimeException("Failed to get SNS topic ARN", e);
+            // Если топик не существует, создаем его
+            log.info("Creating SNS topic {}", topicName);
+            return snsClient.createTopic(builder -> builder.name(topicName)).topicArn();
         }
     }
+
 }
