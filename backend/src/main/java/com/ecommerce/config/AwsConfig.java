@@ -61,13 +61,35 @@ public class AwsConfig {
     public String orderUnconfirmedTopicArn(SnsClient snsClient) {
         String topicName = "OrderUnconfirmed";
         String topicArn = "arn:aws:sns:" + region + ":" + accountId + ":" + topicName;
-        
+
         try {
             // Пробуем получить атрибуты топика
             GetTopicAttributesRequest request = GetTopicAttributesRequest.builder()
                     .topicArn(topicArn)
                     .build();
-            
+
+            snsClient.getTopicAttributes(request);
+            log.info("SNS topic {} already exists", topicName);
+            return topicArn;
+        } catch (Exception e) {
+            // Если топик не существует, создаем его
+            log.info("Creating SNS topic {}", topicName);
+            return snsClient.createTopic(builder -> builder.name(topicName)).topicArn();
+        }
+    }
+
+    @Profile("!test")
+    @Bean
+    public String orderStatusUpdatedTopicArn(SnsClient snsClient) {
+        String topicName = "OrderStatusUpdated";
+        String topicArn = "arn:aws:sns:" + region + ":" + accountId + ":" + topicName;
+
+        try {
+            // Пробуем получить атрибуты топика
+            GetTopicAttributesRequest request = GetTopicAttributesRequest.builder()
+                    .topicArn(topicArn)
+                    .build();
+
             snsClient.getTopicAttributes(request);
             log.info("SNS topic {} already exists", topicName);
             return topicArn;

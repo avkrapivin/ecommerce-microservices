@@ -46,6 +46,6 @@ AWS_S3_REGION: dummy
 AWS_S3_BUCKET_NAME: dummy
 
 
-shippo:
-  api:
-    key: ${SHIPPO_TEST_API_KEY}
+#shippo:
+#  api:
+#    key: ${SHIPPO_TEST_API_KEY}

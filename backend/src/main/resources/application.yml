@@ -54,6 +54,7 @@ aws:
     client-secret: ${COGNITO_CLIENT_SECRET}
   sns:
     order-unconfirmed-topic-name: OrderUnconfirmed
+    order-status-updated-topic-name: OrderStatusUpdated
 
   
 server:
@@ -80,6 +81,6 @@ paypal:
     secret: ${PAYPAL_CLIENT_SECRET}
   mode: sandbox # или production для продакшена
 
-shippo:
-  api:
-    key: ${SHIPPO_API_KEY}
+#shippo:
+#  api:
+#    key: ${SHIPPO_API_KEY}

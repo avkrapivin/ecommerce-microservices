@@ -1,7 +1,6 @@
 package com.ecommerce.shipping.service;
 
-import com.ecommerce.shipping.dto.*;
-import com.ecommerce.shipping.exception.ShippingInfoAlreadyExistsException;
+import com.ecommerce.shipping.dto.ShippingInfoDto;
 import com.ecommerce.shipping.exception.ShippingInfoNotFoundException;
 import com.ecommerce.shipping.model.ShippingInfo;
 import com.ecommerce.shipping.model.ShippingStatus;
@@ -13,7 +12,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -24,30 +23,15 @@ import static org.mockito.Mockito.*;
 class ShippingServiceTest {
 
     @Mock
-    private ShippoService shippoService;
-
-    @Mock
     private ShippingInfoRepository shippingInfoRepository;
 
     @InjectMocks
     private ShippingService shippingService;
 
-    private ShippingLabelRequestDto labelRequest;
-    private ShippingLabelResponseDto labelResponse;
     private ShippingInfo shippingInfo;
 
     @BeforeEach
     void setUp() {
-        labelRequest = new ShippingLabelRequestDto();
-        labelRequest.setOrderId("order123");
-        labelRequest.setRateId("rate123");
-
-        labelResponse = new ShippingLabelResponseDto();
-        labelResponse.setObjectId("transaction123");
-        labelResponse.setTrackingNumber("TRACK123");
-        labelResponse.setTrackingUrlProvider("https://tracking.com/TRACK123");
-        labelResponse.setLabelUrl("https://label.com/label.pdf");
-
         shippingInfo = new ShippingInfo();
         shippingInfo.setId(1L);
         shippingInfo.setOrderId("order123");
@@ -57,29 +41,8 @@ class ShippingServiceTest {
         shippingInfo.setTrackingUrl("https://tracking.com/TRACK123");
         shippingInfo.setLabelUrl("https://label.com/label.pdf");
         shippingInfo.setStatus(ShippingStatus.LABEL_CREATED);
-    }
-
-    @Test
-    void generateShippingLabel_WhenNewOrder_ShouldCreateLabel() throws IOException {
-        when(shippingInfoRepository.existsByOrderId("order123")).thenReturn(false);
-        when(shippoService.generateShippingLabel(any())).thenReturn(labelResponse);
-        when(shippingInfoRepository.save(any())).thenReturn(shippingInfo);
-
-        ShippingLabelResponseDto result = shippingService.generateShippingLabel(labelRequest);
-
-        assertNotNull(result);
-        assertEquals("transaction123", result.getObjectId());
-        assertEquals("TRACK123", result.getTrackingNumber());
-        verify(shippingInfoRepository).save(any());
-    }
-
-    @Test
-    void generateShippingLabel_WhenOrderExists_ShouldThrowException() {
-        when(shippingInfoRepository.existsByOrderId("order123")).thenReturn(true);
-
-        assertThrows(ShippingInfoAlreadyExistsException.class, () -> 
-            shippingService.generateShippingLabel(labelRequest)
-        );
+        shippingInfo.setCreatedAt(LocalDateTime.now());
+        shippingInfo.setUpdatedAt(LocalDateTime.now());
     }
 
     @Test
@@ -91,6 +54,7 @@ class ShippingServiceTest {
         assertNotNull(result);
         assertEquals("order123", result.getOrderId());
         assertEquals("TRACK123", result.getTrackingNumber());
+        assertEquals(ShippingStatus.LABEL_CREATED, result.getStatus());
     }
 
     @Test
@@ -103,21 +67,71 @@ class ShippingServiceTest {
     }
 
     @Test
-    void updateShippingStatus_WhenExists_ShouldUpdateStatus() {
-        when(shippingInfoRepository.findByOrderId("order123")).thenReturn(Optional.of(shippingInfo));
+    void getShippingInfoByTracking_WhenExists_ShouldReturnInfo() {
+        when(shippingInfoRepository.findByTrackingNumberOrShippoShipmentId("TRACK123", null))
+                .thenReturn(Optional.of(shippingInfo));
+
+        ShippingInfoDto result = shippingService.getShippingInfoByTracking("TRACK123");
+
+        assertNotNull(result);
+        assertEquals("order123", result.getOrderId());
+        assertEquals("TRACK123", result.getTrackingNumber());
+    }
+
+    @Test
+    void getShippingInfoByTracking_WhenNotFound_ShouldThrowException() {
+        when(shippingInfoRepository.findByTrackingNumberOrShippoShipmentId("TRACK123", null))
+                .thenReturn(Optional.empty());
+
+        assertThrows(ShippingInfoNotFoundException.class, () -> 
+            shippingService.getShippingInfoByTracking("TRACK123")
+        );
+    }
+
+    @Test
+    void createShippingInfo_WhenNewOrder_ShouldCreateInfo() {
+        when(shippingInfoRepository.existsByOrderId("order123")).thenReturn(false);
         when(shippingInfoRepository.save(any())).thenReturn(shippingInfo);
 
-        shippingService.updateShippingStatus("order123", ShippingStatus.IN_TRANSIT);
+        shippingService.createShippingInfo("order123");
 
+        verify(shippingInfoRepository).existsByOrderId("order123");
         verify(shippingInfoRepository).save(any());
     }
 
     @Test
-    void updateShippingStatus_WhenNotFound_ShouldThrowException() {
-        when(shippingInfoRepository.findByOrderId("order123")).thenReturn(Optional.empty());
+    void createShippingInfo_WhenOrderExists_ShouldNotCreateInfo() {
+        when(shippingInfoRepository.existsByOrderId("order123")).thenReturn(true);
 
-        assertThrows(ShippingInfoNotFoundException.class, () -> 
-            shippingService.updateShippingStatus("order123", ShippingStatus.IN_TRANSIT)
-        );
+        shippingService.createShippingInfo("order123");
+
+        verify(shippingInfoRepository).existsByOrderId("order123");
+        verify(shippingInfoRepository, never()).save(any());
+    }
+
+    @Test
+    void updateShippingInfo_WhenOrderExists_ShouldUpdateInfo() {
+        when(shippingInfoRepository.findByOrderId("order123")).thenReturn(Optional.of(shippingInfo));
+        when(shippingInfoRepository.save(any())).thenReturn(shippingInfo);
+
+        shippingService.updateShippingInfo("order123", "ship_123", "TRACK123", 
+                "https://tracking.com/TRACK123", "https://label.com/label.pdf", 
+                "DHL", "Express", "15.99", "USD", "3-5");
+
+        verify(shippingInfoRepository).findByOrderId("order123");
+        verify(shippingInfoRepository).save(any());
+    }
+
+    @Test
+    void updateShippingInfo_WhenOrderNotExists_ShouldCreateNewInfo() {
+        when(shippingInfoRepository.findByOrderId("order123")).thenReturn(Optional.empty());
+        when(shippingInfoRepository.save(any())).thenReturn(shippingInfo);
+
+        shippingService.updateShippingInfo("order123", "ship_123", "TRACK123", 
+                "https://tracking.com/TRACK123", "https://label.com/label.pdf", 
+                "DHL", "Express", "15.99", "USD", "3-5");
+
+        verify(shippingInfoRepository).findByOrderId("order123");
+        verify(shippingInfoRepository).save(any());
     }
 } 

@@ -9,6 +9,7 @@ import com.ecommerce.products.dto.UpdateProductDto;
 import com.ecommerce.products.entity.Product;
 import com.ecommerce.products.service.ProductService;
 import com.ecommerce.products.service.ProductReservationService;
+import com.ecommerce.shipping.service.ShippingService;
 import com.ecommerce.user.entity.User;
 import com.ecommerce.user.service.UserService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -39,6 +40,7 @@ public class OrderService {
     private final OrderCalculationService calculationService;
     private final ProductReservationService productReservationService;
     private final OrderEventPublisher orderEventPublisher;
+    private final ShippingService shippingService;
     private final ObjectMapper objectMapper;
     private static final Logger log = LoggerFactory.getLogger(OrderService.class);
 
@@ -119,6 +121,9 @@ public class OrderService {
 
         // Сохраняем обновленные значения
         savedOrder = orderRepository.save(savedOrder);
+
+        // Создаем запись о доставке
+        shippingService.createShippingInfo(savedOrder.getOrderNumber());
 
         // Публикуем событие о создании заказа
         orderEventPublisher.publishOrderCreated(savedOrder);
