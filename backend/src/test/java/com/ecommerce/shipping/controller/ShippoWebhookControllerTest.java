@@ -41,6 +41,7 @@ class ShippoWebhookControllerTest {
 
     @BeforeEach
     void setUp() {
+        controller = new ShippoWebhookController(shippingInfoRepository, new ObjectMapper());
         mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
         
         shippingInfo = new ShippingInfo();
@@ -63,7 +64,7 @@ class ShippoWebhookControllerTest {
                 .thenReturn(shippingInfo);
 
         // When & Then
-        mockMvc.perform(post("/api/delivery/shippo-webhook")
+        mockMvc.perform(post("/delivery/shippo-webhook")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(payload))
                 .andExpect(status().isOk())
@@ -82,7 +83,7 @@ class ShippoWebhookControllerTest {
                 .thenReturn(Optional.empty());
 
         // When & Then
-        mockMvc.perform(post("/api/delivery/shippo-webhook")
+        mockMvc.perform(post("/delivery/shippo-webhook")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(payload))
                 .andExpect(status().isOk())
@@ -98,7 +99,7 @@ class ShippoWebhookControllerTest {
         String payload = "invalid json";
 
         // When & Then
-        mockMvc.perform(post("/api/delivery/shippo-webhook")
+        mockMvc.perform(post("/delivery/shippo-webhook")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(payload))
                 .andExpect(status().isInternalServerError())

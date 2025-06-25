@@ -34,6 +34,7 @@ class SnsWebhookControllerTest {
 
     @BeforeEach
     void setUp() {
+        controller = new SnsWebhookController(orderStatusUpdateListener, new ObjectMapper());
         mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
     }
 
@@ -43,7 +44,7 @@ class SnsWebhookControllerTest {
         String payload = "{\"Type\":\"Notification\",\"Message\":\"{\\\"orderId\\\":\\\"ORD-12345678\\\",\\\"status\\\":\\\"SHIPPED\\\"}\",\"Subject\":\"OrderStatusUpdated\"}";
 
         // When & Then
-        mockMvc.perform(post("/api/delivery/webhook")
+        mockMvc.perform(post("/delivery/webhook")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(payload)
                 .header("x-amz-sns-message-type", "Notification"))
@@ -57,7 +58,7 @@ class SnsWebhookControllerTest {
         String payload = "{\"Type\":\"SubscriptionConfirmation\",\"SubscribeURL\":\"https://example.com/confirm\"}";
 
         // When & Then
-        mockMvc.perform(post("/api/delivery/webhook")
+        mockMvc.perform(post("/delivery/webhook")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(payload)
                 .header("x-amz-sns-message-type", "SubscriptionConfirmation"))
@@ -71,7 +72,7 @@ class SnsWebhookControllerTest {
         String payload = "{\"Type\":\"Unknown\"}";
 
         // When & Then
-        mockMvc.perform(post("/api/delivery/webhook")
+        mockMvc.perform(post("/delivery/webhook")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(payload)
                 .header("x-amz-sns-message-type", "Unknown"))
@@ -85,7 +86,7 @@ class SnsWebhookControllerTest {
         String payload = "invalid json";
 
         // When & Then
-        mockMvc.perform(post("/api/delivery/webhook")
+        mockMvc.perform(post("/delivery/webhook")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(payload)
                 .header("x-amz-sns-message-type", "Notification"))

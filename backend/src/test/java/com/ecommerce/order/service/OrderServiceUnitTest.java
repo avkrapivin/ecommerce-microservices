@@ -11,6 +11,7 @@ import com.ecommerce.products.entity.Product;
 import com.ecommerce.products.entity.ProductReservation;
 import com.ecommerce.products.service.ProductReservationService;
 import com.ecommerce.products.service.ProductService;
+import com.ecommerce.shipping.service.ShippingService;
 import com.ecommerce.user.entity.User;
 import com.ecommerce.user.service.UserService;
 import org.junit.jupiter.api.BeforeEach;
@@ -51,6 +52,9 @@ public class OrderServiceUnitTest {
 
     @Mock
     private OrderEventPublisher orderEventPublisher;
+
+    @Mock
+    private ShippingService shippingService;
     
     @InjectMocks
     private OrderService orderService;
@@ -181,12 +185,14 @@ public class OrderServiceUnitTest {
         when(calculationService.calculateTotal(any(), any(), any())).thenReturn(BigDecimal.valueOf(100.00));
         when(orderRepository.save(any())).thenReturn(testOrder);
         when(productReservationService.reserveProduct(any(), any(), any())).thenReturn(new ProductReservation());
-        
+        doNothing().when(shippingService).createShippingInfo(any(String.class));
+
         OrderDto result = orderService.createOrder(1L, request);
         
         assertNotNull(result);
         assertEquals(1L, result.getId());
         verify(orderRepository, atLeastOnce()).save(any());
+        verify(shippingService).createShippingInfo(any(String.class));
     }
     
     @Test

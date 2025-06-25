@@ -13,6 +13,7 @@ import com.ecommerce.products.dto.UpdateProductDto;
 import com.ecommerce.products.entity.Product;
 import com.ecommerce.products.service.ProductService;
 import com.ecommerce.products.service.ProductReservationService;
+import com.ecommerce.shipping.service.ShippingService;
 import com.ecommerce.user.entity.User;
 import com.ecommerce.user.service.UserService;
 import org.junit.jupiter.api.BeforeEach;
@@ -65,6 +66,9 @@ public class OrderServiceTest extends OrderIntegrationTest {
 
     @MockBean
     private OrderEventPublisher orderEventPublisher;
+
+    @MockBean
+    private ShippingService shippingService;
 
     private Order testOrder;
     private User testUser;
@@ -160,6 +164,7 @@ public class OrderServiceTest extends OrderIntegrationTest {
         savedOrder.setShippingAddress(testShippingAddress);
         savedOrder.setStatus(OrderStatus.PENDING);
         savedOrder.setPaymentStatus(PaymentStatus.PENDING);
+        savedOrder.setOrderNumber("ORD-12345678");
 
         OrderItem saveOrderItem = new OrderItem();
         saveOrderItem.setOrder(savedOrder);
@@ -180,6 +185,7 @@ public class OrderServiceTest extends OrderIntegrationTest {
         when(calculationService.calculateShippingCost(any())).thenReturn(BigDecimal.ZERO);
         when(calculationService.calculateTax(any())).thenReturn(BigDecimal.ZERO);
         when(calculationService.calculateTotal(any(), any(), any())).thenReturn(BigDecimal.valueOf(100.0));
+        doNothing().when(shippingService).createShippingInfo(any(String.class));
 
         // Act
         OrderDto response = orderService.createOrder(userId, request);
@@ -198,6 +204,7 @@ public class OrderServiceTest extends OrderIntegrationTest {
         verify(calculationService).calculateShippingCost(any());
         verify(calculationService).calculateTax(any());
         verify(calculationService).calculateTotal(any(), any(), any());
+        verify(shippingService).createShippingInfo("ORD-12345678");
     }
 
     @Test
@@ -330,12 +337,14 @@ public class OrderServiceTest extends OrderIntegrationTest {
         when(calculationService.calculateTax(any())).thenReturn(BigDecimal.valueOf(10.0));
         when(calculationService.calculateTotal(any(), any(), any())).thenReturn(BigDecimal.valueOf(120.0));
         when(orderRepository.save(any())).thenReturn(testOrder);
+        doNothing().when(shippingService).createShippingInfo(any(String.class));
         
         OrderDto result = orderService.createOrder(1L, request);
         
         assertNotNull(result);
         assertEquals(OrderStatus.PENDING, result.getStatus());
         verify(productReservationService).reserveProduct(1L, 1L, 1);
+        verify(shippingService).createShippingInfo("ORD-123456");
     }
     
     @Test

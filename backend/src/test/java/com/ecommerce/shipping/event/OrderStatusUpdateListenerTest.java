@@ -33,6 +33,8 @@ class OrderStatusUpdateListenerTest {
 
     @BeforeEach
     void setUp() {
+        listener = new OrderStatusUpdateListener(shippingInfoRepository, new ObjectMapper());
+        
         shippingInfo = new ShippingInfo();
         shippingInfo.setId(1L);
         shippingInfo.setOrderId("ORD-12345678");
