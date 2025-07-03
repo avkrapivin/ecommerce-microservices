@@ -10,25 +10,23 @@ import com.ecommerce.lambda.model.OrderStatusUpdateEvent;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.*;
-import software.amazon.awssdk.services.sns.SnsClient;
-import software.amazon.awssdk.services.sns.model.PublishRequest;
 
 @Slf4j
 public class ShippoService {
-    private static final String SHIPPO_API_URL = "https://api.goshippo.com";
     private static final MediaType JSON = MediaType.parse("application/json; charset=utf-8");
     private static final int MAX_RETRIES = 3;
     private static final int INITIAL_RETRY_DELAY_MS = 1000;
 
     private final ObjectMapper objectMapper;
     private final OkHttpClient httpClient;
-    private final SnsClient snsClient;
+    private final SnsPublisher snsPublisher;
     private final String orderStatusUpdatedTopicArn;
     private final String shippoApiKey;
     private final ShippoAddressDto fromAddress;
+    private final String shippoApiUrl;
 
-    public ShippoService(SnsClient snsClient, String orderStatusUpdatedTopicArn, String shippoApiKey) {
-        this.snsClient = snsClient;
+    public ShippoService(SnsPublisher snsPublisher, String orderStatusUpdatedTopicArn, String shippoApiKey) {
+        this.snsPublisher = snsPublisher;
         this.objectMapper = new ObjectMapper();
         this.httpClient = new OkHttpClient.Builder()
                 .connectTimeout(30, TimeUnit.SECONDS)
@@ -37,6 +35,8 @@ public class ShippoService {
                 .build();
         this.orderStatusUpdatedTopicArn = orderStatusUpdatedTopicArn;
         this.shippoApiKey = shippoApiKey;
+        this.shippoApiUrl = System.getProperty("SHIPPO_API_URL") != null ? 
+            System.getProperty("SHIPPO_API_URL") : "https://api.goshippo.com";
         
         // Инициализация адреса отправителя из переменных окружения
         this.fromAddress = new ShippoAddressDto();
@@ -63,14 +63,14 @@ public class ShippoService {
             toAddress.setCountry(event.getShippingCountry());
             toAddress.setPhone(event.getPhoneNumber());
 
-            // Создаем посылку из данных заказа
+            // Создаем посылку из данных заказа с проверкой на null
             ShippoParcelDto parcel = new ShippoParcelDto();
-            parcel.setLength(event.getParcelLength());
-            parcel.setWidth(event.getParcelWidth());
-            parcel.setHeight(event.getParcelHeight());
-            parcel.setDistanceUnit(event.getParcelDistanceUnit());
-            parcel.setWeight(event.getParcelWeight());
-            parcel.setMassUnit(event.getParcelMassUnit());
+            parcel.setLength(event.getParcelLength() != null ? event.getParcelLength() : 0.0);
+            parcel.setWidth(event.getParcelWidth() != null ? event.getParcelWidth() : 0.0);
+            parcel.setHeight(event.getParcelHeight() != null ? event.getParcelHeight() : 0.0);
+            parcel.setDistanceUnit(event.getParcelDistanceUnit() != null ? event.getParcelDistanceUnit() : "cm");
+            parcel.setWeight(event.getParcelWeight() != null ? event.getParcelWeight() : 0.0);
+            parcel.setMassUnit(event.getParcelMassUnit() != null ? event.getParcelMassUnit() : "kg");
 
             // Создаем отправление
             ShippoShipmentDto shipmentDto = new ShippoShipmentDto();
@@ -134,7 +134,7 @@ public class ShippoService {
         RequestBody body = RequestBody.create(objectMapper.writeValueAsString(shipmentDto), JSON);
         
         Request request = new Request.Builder()
-                .url(SHIPPO_API_URL + "/shipments")
+                .url(shippoApiUrl + "/shipments")
                 .addHeader("Authorization", "ShippoToken " + shippoApiKey)
                 .post(body)
                 .build();
@@ -152,13 +152,7 @@ public class ShippoService {
     private void publishOrderStatusUpdate(String orderId, String status, String trackingNumber) {
         try {
             String message = objectMapper.writeValueAsString(new OrderStatusUpdateEvent(orderId, status, trackingNumber));
-            PublishRequest request = PublishRequest.builder()
-                    .topicArn(orderStatusUpdatedTopicArn)
-                    .message(message)
-                    .subject("OrderStatusUpdated")
-                    .build();
-
-            snsClient.publish(request);
+            snsPublisher.publishMessage(orderStatusUpdatedTopicArn, message);
             log.info("Published order status update for order {}: {}", orderId, status);
         } catch (Exception e) {
             log.error("Error publishing order status update: {}", e.getMessage(), e);

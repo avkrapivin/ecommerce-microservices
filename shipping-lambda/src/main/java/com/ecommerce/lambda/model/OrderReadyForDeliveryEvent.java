@@ -20,10 +20,10 @@ public class OrderReadyForDeliveryEvent {
     private String currency;
     
     // Параметры посылки
-    private double parcelLength;
-    private double parcelWidth;
-    private double parcelHeight;
+    private Double parcelLength;
+    private Double parcelWidth;
+    private Double parcelHeight;
     private String parcelDistanceUnit;
-    private double parcelWeight;
+    private Double parcelWeight;
     private String parcelMassUnit;
 } 

@@ -5,17 +5,15 @@ import com.ecommerce.lambda.model.PaymentCompletedEvent;
 import com.ecommerce.lambda.model.OrderReadyForDeliveryEvent;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
-import software.amazon.awssdk.services.sns.SnsClient;
-import software.amazon.awssdk.services.sns.model.PublishRequest;
 
 @Slf4j
 public class OrderDeliveryService {
-    private final SnsClient snsClient;
+    private final SnsPublisher snsPublisher;
     private final ObjectMapper objectMapper;
     private final String orderReadyForDeliveryTopicArn;
 
-    public OrderDeliveryService(SnsClient snsClient, String orderReadyForDeliveryTopicArn) {
-        this.snsClient = snsClient;
+    public OrderDeliveryService(SnsPublisher snsPublisher, String orderReadyForDeliveryTopicArn) {
+        this.snsPublisher = snsPublisher;
         this.objectMapper = new ObjectMapper();
         this.orderReadyForDeliveryTopicArn = orderReadyForDeliveryTopicArn;
     }
@@ -41,22 +39,16 @@ public class OrderDeliveryService {
             deliveryEvent.setCurrency(event.getCurrency());
             
             // Копируем параметры посылки
-            deliveryEvent.setParcelLength(event.getParcelLength());
-            deliveryEvent.setParcelWidth(event.getParcelWidth());
-            deliveryEvent.setParcelHeight(event.getParcelHeight());
-            deliveryEvent.setParcelDistanceUnit(event.getParcelDistanceUnit());
-            deliveryEvent.setParcelWeight(event.getParcelWeight());
-            deliveryEvent.setParcelMassUnit(event.getParcelMassUnit());
+            deliveryEvent.setParcelLength(event.getParcelLength() != null ? event.getParcelLength() : 0.0);
+            deliveryEvent.setParcelWidth(event.getParcelWidth() != null ? event.getParcelWidth() : 0.0);
+            deliveryEvent.setParcelHeight(event.getParcelHeight() != null ? event.getParcelHeight() : 0.0);
+            deliveryEvent.setParcelDistanceUnit(event.getParcelDistanceUnit() != null ? event.getParcelDistanceUnit() : "cm");
+            deliveryEvent.setParcelWeight(event.getParcelWeight() != null ? event.getParcelWeight() : 0.0);
+            deliveryEvent.setParcelMassUnit(event.getParcelMassUnit() != null ? event.getParcelMassUnit() : "kg");
 
             // Публикуем событие о готовности заказа к доставке
             String message = objectMapper.writeValueAsString(deliveryEvent);
-            PublishRequest request = PublishRequest.builder()
-                    .topicArn(orderReadyForDeliveryTopicArn)
-                    .message(message)
-                    .subject("OrderReadyForDelivery")
-                    .build();
-
-            snsClient.publish(request);
+            snsPublisher.publishMessage(orderReadyForDeliveryTopicArn, message);
             log.info("Order {} is ready for delivery", event.getOrderNumber());
         } catch (Exception e) {
             log.error("Error preparing order {} for delivery: {}", event.getOrderNumber(), e.getMessage(), e);

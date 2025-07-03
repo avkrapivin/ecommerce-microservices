@@ -1,0 +1,29 @@
+# Test Configuration
+aws:
+  region: us-east-1
+  sns:
+    payment-completed-topic: arn:aws:sns:us-east-1:123456789012:payment-completed
+    payment-suspicious-topic: arn:aws:sns:us-east-1:123456789012:payment-suspicious
+    order-status-updated-topic: arn:aws:sns:us-east-1:123456789012:order-status-updated
+
+paypal:
+  client-id: test-client-id
+  client-secret: test-client-secret
+  mode: sandbox
+
+shippo:
+  api-key: test-api-key
+  base-url: http://localhost:8080
+  from:
+    name: Test Sender
+    street: 123 Sender St
+    city: Sender City
+    state: CA
+    zip: 90210
+    country: US
+    phone: +1234567890
+
+logging:
+  level:
+    com.ecommerce.lambda: DEBUG
+    org.springframework: INFO 
