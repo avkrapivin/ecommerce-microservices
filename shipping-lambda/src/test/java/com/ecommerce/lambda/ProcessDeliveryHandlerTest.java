@@ -246,6 +246,44 @@ class ProcessDeliveryHandlerTest {
                 .hasMessageContaining("Failed to process SNS event");
     }
 
+    @Test
+    void shouldHandleShippoServiceExceptionWithDetailedStatus() throws Exception {
+        // Given
+        OrderReadyForDeliveryEvent event = createTestEvent();
+        String eventJson = objectMapper.writeValueAsString(event);
+        
+        SNSEvent snsEvent = TestDataFactory.createSnsEvent(eventJson);
+        
+        // Shippo service should throw exception but also publish SHIPPING_FAILED status
+        doThrow(new RuntimeException("Shippo API error: Address validation failed"))
+            .when(shippoService).processDelivery(any(OrderReadyForDeliveryEvent.class));
+
+        // When & Then
+        assertThatThrownBy(() -> handler.handleRequest(snsEvent, null))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("Failed to process SNS event");
+        
+        // Verify shippoService was called
+        verify(shippoService).processDelivery(eq(event));
+    }
+
+    @Test
+    void shouldProcessDeliverySuccessfullyWithStatusPublishing() throws Exception {
+        // Given
+        OrderReadyForDeliveryEvent event = createTestEvent();
+        String eventJson = objectMapper.writeValueAsString(event);
+        
+        SNSEvent snsEvent = TestDataFactory.createSnsEvent(eventJson);
+
+        // When
+        handler.handleRequest(snsEvent, null);
+
+        // Then
+        verify(shippoService).processDelivery(eq(event));
+        // ShippoService should publish SHIPPING_INITIATED status internally
+        // This is verified at the ShippoService unit test level
+    }
+
     private OrderReadyForDeliveryEvent createTestEvent() {
         OrderReadyForDeliveryEvent event = new OrderReadyForDeliveryEvent();
         event.setOrderId("order-123");

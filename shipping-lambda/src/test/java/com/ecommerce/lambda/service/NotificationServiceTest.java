@@ -186,6 +186,118 @@ class NotificationServiceTest {
                 .hasMessageContaining("Failed to process order status updated notification");
     }
 
+    @Test
+    void shouldProcessShippingInitiated() {
+        // Given
+        OrderStatusUpdateEvent event = new OrderStatusUpdateEvent();
+        event.setOrderId("order-123");
+        event.setOrderNumber("ORD-123");
+        event.setCustomerEmail("customer@example.com");
+        event.setCustomerName("John Doe");
+        event.setStatus("SHIPPING_INITIATED");
+        event.setTrackingNumber("TRACK123");
+
+        // When
+        notificationService.processShippingInitiated(event);
+
+        // Then
+        verify(emailService).sendOrderReadyForDeliveryEmail(any(OrderReadyForDeliveryEvent.class));
+    }
+
+    @Test
+    void shouldThrowExceptionForNullEventInProcessShippingInitiated() {
+        // When & Then
+        assertThatThrownBy(() -> notificationService.processShippingInitiated(null))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("Failed to process shipping initiated notification");
+    }
+
+    @Test
+    void shouldThrowExceptionWhenEmailServiceFailsInProcessShippingInitiated() {
+        // Given
+        OrderStatusUpdateEvent event = new OrderStatusUpdateEvent();
+        event.setOrderId("order-123");
+        event.setOrderNumber("ORD-123");
+        event.setCustomerEmail("customer@example.com");
+        event.setCustomerName("John Doe");
+        event.setStatus("SHIPPING_INITIATED");
+
+        doThrow(new RuntimeException("Email service error"))
+                .when(emailService).sendOrderReadyForDeliveryEmail(any(OrderReadyForDeliveryEvent.class));
+
+        // When & Then
+        assertThatThrownBy(() -> notificationService.processShippingInitiated(event))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("Failed to process shipping initiated notification");
+    }
+
+    @Test
+    void shouldProcessShippingError() {
+        // Given
+        OrderStatusUpdateEvent event = new OrderStatusUpdateEvent();
+        event.setOrderId("order-123");
+        event.setOrderNumber("ORD-123");
+        event.setCustomerEmail("customer@example.com");
+        event.setCustomerName("John Doe");
+        event.setStatus("SHIPPING_FAILED");
+        event.setNotes("Shippo API error: Address validation failed");
+
+        // When
+        notificationService.processShippingError(event);
+
+        // Then
+        verify(emailService).sendOrderStatusUpdatedEmail(event);
+    }
+
+    @Test
+    void shouldThrowExceptionForNullEventInProcessShippingError() {
+        // When & Then
+        assertThatThrownBy(() -> notificationService.processShippingError(null))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("Failed to process shipping error notification");
+    }
+
+    @Test
+    void shouldThrowExceptionWhenEmailServiceFailsInProcessShippingError() {
+        // Given
+        OrderStatusUpdateEvent event = new OrderStatusUpdateEvent();
+        event.setOrderId("order-123");
+        event.setOrderNumber("ORD-123");
+        event.setCustomerEmail("customer@example.com");
+        event.setCustomerName("John Doe");
+        event.setStatus("SHIPPING_FAILED");
+
+        doThrow(new RuntimeException("Email service error"))
+                .when(emailService).sendOrderStatusUpdatedEmail(any(OrderStatusUpdateEvent.class));
+
+        // When & Then
+        assertThatThrownBy(() -> notificationService.processShippingError(event))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("Failed to process shipping error notification");
+    }
+
+    @Test
+    void shouldConvertOrderStatusUpdateEventToDeliveryEvent() {
+        // Given
+        OrderStatusUpdateEvent statusEvent = new OrderStatusUpdateEvent();
+        statusEvent.setOrderId("order-123");
+        statusEvent.setOrderNumber("ORD-123");
+        statusEvent.setCustomerEmail("customer@example.com");
+        statusEvent.setCustomerName("John Doe");
+        statusEvent.setStatus("SHIPPING_INITIATED");
+
+        // When
+        notificationService.processShippingInitiated(statusEvent);
+
+        // Then
+        verify(emailService).sendOrderReadyForDeliveryEmail(argThat(deliveryEvent -> 
+            deliveryEvent.getOrderId().equals("order-123") &&
+            deliveryEvent.getOrderNumber().equals("ORD-123") &&
+            deliveryEvent.getCustomerEmail().equals("customer@example.com") &&
+            deliveryEvent.getCustomerName().equals("John Doe")
+        ));
+    }
+
     private PaymentCompletedEvent createValidPaymentCompletedEvent() {
         PaymentCompletedEvent event = new PaymentCompletedEvent();
         event.setOrderId("order-123");

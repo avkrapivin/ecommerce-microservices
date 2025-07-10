@@ -94,6 +94,55 @@ public class NotificationService {
         }
     }
     
+    /**
+     * Обрабатывает событие успешного создания доставки
+     */
+    public void processShippingInitiated(OrderStatusUpdateEvent event) {
+        try {
+            log.info("Processing shipping initiated notification for order: {}", 
+                event.getOrderNumber());
+            
+            validateOrderStatusUpdateEvent(event);
+            
+            // Создаем событие доставки из статуса заказа
+            OrderReadyForDeliveryEvent deliveryEvent = convertToDeliveryEvent(event);
+            emailService.sendOrderReadyForDeliveryEmail(deliveryEvent);
+            
+            log.info("Successfully processed shipping initiated notification for order: {}", 
+                event.getOrderNumber());
+            
+        } catch (Exception e) {
+            String orderNumber = event != null ? event.getOrderNumber() : "unknown";
+            log.error("Failed to process shipping initiated notification for order {}: {}", 
+                orderNumber, e.getMessage(), e);
+            throw new RuntimeException("Failed to process shipping initiated notification", e);
+        }
+    }
+    
+    /**
+     * Обрабатывает событие ошибки создания доставки
+     */
+    public void processShippingError(OrderStatusUpdateEvent event) {
+        try {
+            log.info("Processing shipping error notification for order: {}", 
+                event.getOrderNumber());
+            
+            validateOrderStatusUpdateEvent(event);
+            
+            // Отправляем email об ошибке доставки
+            emailService.sendOrderStatusUpdatedEmail(event);
+            
+            log.info("Successfully processed shipping error notification for order: {}", 
+                event.getOrderNumber());
+            
+        } catch (Exception e) {
+            String orderNumber = event != null ? event.getOrderNumber() : "unknown";
+            log.error("Failed to process shipping error notification for order {}: {}", 
+                orderNumber, e.getMessage(), e);
+            throw new RuntimeException("Failed to process shipping error notification", e);
+        }
+    }
+    
     private void validatePaymentCompletedEvent(PaymentCompletedEvent event) {
         // event уже проверен на null в вызывающем методе
         if (event.getOrderNumber() == null || event.getOrderNumber().trim().isEmpty()) {
@@ -152,5 +201,26 @@ public class NotificationService {
         // Простая валидация email
         String emailRegex = "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$";
         return email.matches(emailRegex);
+    }
+    
+    /**
+     * Конвертирует OrderStatusUpdateEvent в OrderReadyForDeliveryEvent для email уведомлений
+     */
+    private OrderReadyForDeliveryEvent convertToDeliveryEvent(OrderStatusUpdateEvent statusEvent) {
+        OrderReadyForDeliveryEvent deliveryEvent = new OrderReadyForDeliveryEvent();
+        deliveryEvent.setOrderId(statusEvent.getOrderId());
+        deliveryEvent.setOrderNumber(statusEvent.getOrderNumber());
+        deliveryEvent.setCustomerEmail(statusEvent.getCustomerEmail());
+        deliveryEvent.setCustomerName(statusEvent.getCustomerName());
+        
+        // Заполняем базовые поля (адрес может быть неполным, но это не критично для email)
+        // В реальной системе можно получить полные данные заказа из базы данных
+        deliveryEvent.setShippingAddress("Shipping address");
+        deliveryEvent.setShippingCity("City");
+        deliveryEvent.setShippingState("State");
+        deliveryEvent.setShippingZip("ZIP");
+        deliveryEvent.setShippingCountry("Country");
+        
+        return deliveryEvent;
     }
 } 

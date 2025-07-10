@@ -79,13 +79,28 @@ public class NotificationHandler implements RequestHandler<SNSEvent, Void> {
                 PaymentCompletedEvent paymentEvent = objectMapper.readValue(message, PaymentCompletedEvent.class);
                 notificationService.processPaymentCompleted(paymentEvent);
                 
-            } else if (topicArn.contains("order-ready-for-delivery")) {
-                OrderReadyForDeliveryEvent deliveryEvent = objectMapper.readValue(message, OrderReadyForDeliveryEvent.class);
-                notificationService.processOrderReadyForDelivery(deliveryEvent);
-                
             } else if (topicArn.contains("OrderStatusUpdated")) {
                 OrderStatusUpdateEvent statusEvent = objectMapper.readValue(message, OrderStatusUpdateEvent.class);
-                notificationService.processOrderStatusUpdated(statusEvent);
+                
+                // Обрабатываем разные типы статусов
+                String status = statusEvent.getStatus();
+                switch (status) {
+                    case "SHIPPING_INITIATED":
+                        notificationService.processShippingInitiated(statusEvent);
+                        break;
+                    case "SHIPPING_FAILED":
+                        notificationService.processShippingError(statusEvent);
+                        break;
+                    case "IN_DELIVERY":
+                    case "DELIVERED":
+                    case "CANCELLED":
+                        notificationService.processOrderStatusUpdated(statusEvent);
+                        break;
+                    default:
+                        log.warn("Unknown order status: {}. Processing as generic status update.", status);
+                        notificationService.processOrderStatusUpdated(statusEvent);
+                        break;
+                }
                 
             } else {
                 log.warn("Unknown topic ARN: {}. Skipping notification processing.", topicArn);

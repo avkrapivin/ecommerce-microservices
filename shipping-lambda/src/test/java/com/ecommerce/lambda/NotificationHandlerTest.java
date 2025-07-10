@@ -51,23 +51,79 @@ class NotificationHandlerTest {
     }
 
     @Test
-    void shouldProcessOrderReadyForDeliveryEvent() throws Exception {
+    void shouldProcessShippingInitiatedEvent() throws Exception {
         // Given
-        OrderReadyForDeliveryEvent event = createOrderReadyForDeliveryEvent();
+        OrderStatusUpdateEvent event = createOrderStatusUpdateEvent("SHIPPING_INITIATED");
         String eventJson = objectMapper.writeValueAsString(event);
-        SNSEvent snsEvent = createSnsEvent("arn:aws:sns:us-east-1:123456789:order-ready-for-delivery", eventJson);
+        SNSEvent snsEvent = createSnsEvent("arn:aws:sns:us-east-1:123456789:OrderStatusUpdated", eventJson);
 
         // When
         handler.handleRequest(snsEvent, context);
 
         // Then
-        verify(notificationService).processOrderReadyForDelivery(any(OrderReadyForDeliveryEvent.class));
+        verify(notificationService).processShippingInitiated(any(OrderStatusUpdateEvent.class));
     }
 
     @Test
-    void shouldProcessOrderStatusUpdatedEvent() throws Exception {
+    void shouldProcessShippingFailedEvent() throws Exception {
         // Given
-        OrderStatusUpdateEvent event = createOrderStatusUpdateEvent();
+        OrderStatusUpdateEvent event = createOrderStatusUpdateEvent("SHIPPING_FAILED");
+        String eventJson = objectMapper.writeValueAsString(event);
+        SNSEvent snsEvent = createSnsEvent("arn:aws:sns:us-east-1:123456789:OrderStatusUpdated", eventJson);
+
+        // When
+        handler.handleRequest(snsEvent, context);
+
+        // Then
+        verify(notificationService).processShippingError(any(OrderStatusUpdateEvent.class));
+    }
+
+    @Test
+    void shouldProcessGenericOrderStatusUpdatedEvent() throws Exception {
+        // Given
+        OrderStatusUpdateEvent event = createOrderStatusUpdateEvent("DELIVERED");
+        String eventJson = objectMapper.writeValueAsString(event);
+        SNSEvent snsEvent = createSnsEvent("arn:aws:sns:us-east-1:123456789:OrderStatusUpdated", eventJson);
+
+        // When
+        handler.handleRequest(snsEvent, context);
+
+        // Then
+        verify(notificationService).processOrderStatusUpdated(any(OrderStatusUpdateEvent.class));
+    }
+
+    @Test
+    void shouldProcessInDeliveryStatus() throws Exception {
+        // Given
+        OrderStatusUpdateEvent event = createOrderStatusUpdateEvent("IN_DELIVERY");
+        String eventJson = objectMapper.writeValueAsString(event);
+        SNSEvent snsEvent = createSnsEvent("arn:aws:sns:us-east-1:123456789:OrderStatusUpdated", eventJson);
+
+        // When
+        handler.handleRequest(snsEvent, context);
+
+        // Then
+        verify(notificationService).processOrderStatusUpdated(any(OrderStatusUpdateEvent.class));
+    }
+
+    @Test
+    void shouldProcessCancelledStatus() throws Exception {
+        // Given
+        OrderStatusUpdateEvent event = createOrderStatusUpdateEvent("CANCELLED");
+        String eventJson = objectMapper.writeValueAsString(event);
+        SNSEvent snsEvent = createSnsEvent("arn:aws:sns:us-east-1:123456789:OrderStatusUpdated", eventJson);
+
+        // When
+        handler.handleRequest(snsEvent, context);
+
+        // Then
+        verify(notificationService).processOrderStatusUpdated(any(OrderStatusUpdateEvent.class));
+    }
+
+    @Test
+    void shouldProcessUnknownStatusAsGeneric() throws Exception {
+        // Given
+        OrderStatusUpdateEvent event = createOrderStatusUpdateEvent("UNKNOWN_STATUS");
         String eventJson = objectMapper.writeValueAsString(event);
         SNSEvent snsEvent = createSnsEvent("arn:aws:sns:us-east-1:123456789:OrderStatusUpdated", eventJson);
 
@@ -82,7 +138,7 @@ class NotificationHandlerTest {
     void shouldProcessMultipleRecords() throws Exception {
         // Given
         PaymentCompletedEvent event1 = createPaymentCompletedEvent();
-        OrderStatusUpdateEvent event2 = createOrderStatusUpdateEvent();
+        OrderStatusUpdateEvent event2 = createOrderStatusUpdateEvent("DELIVERED");
         
         String event1Json = objectMapper.writeValueAsString(event1);
         String event2Json = objectMapper.writeValueAsString(event2);
@@ -206,22 +262,17 @@ class NotificationHandlerTest {
         return event;
     }
 
-    private OrderReadyForDeliveryEvent createOrderReadyForDeliveryEvent() {
-        OrderReadyForDeliveryEvent event = new OrderReadyForDeliveryEvent();
-        event.setOrderId("order-123");
-        event.setOrderNumber("ORD-123");
-        event.setCustomerEmail("customer@example.com");
-        event.setCustomerName("John Doe");
-        return event;
+    private OrderStatusUpdateEvent createOrderStatusUpdateEvent() {
+        return createOrderStatusUpdateEvent("DELIVERED");
     }
 
-    private OrderStatusUpdateEvent createOrderStatusUpdateEvent() {
+    private OrderStatusUpdateEvent createOrderStatusUpdateEvent(String status) {
         OrderStatusUpdateEvent event = new OrderStatusUpdateEvent();
         event.setOrderId("order-123");
         event.setOrderNumber("ORD-123");
         event.setCustomerEmail("customer@example.com");
         event.setCustomerName("John Doe");
-        event.setStatus("DELIVERED");
+        event.setStatus(status);
         return event;
     }
 } 

@@ -23,6 +23,10 @@ Parameters:
     AllowedValues:
       - sandbox
       - live
+  FromEmail:
+    Type: String
+    Description: Email address for sending notifications
+    Default: noreply@example.com
 
 Resources:
   OrderDispatcherFunction:
@@ -165,6 +169,36 @@ Resources:
       Topics:
         - !Ref OrderStatusUpdatedTopic
 
+  NotificationFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${Environment}-notification
+      CodeUri: ../shipping-lambda
+      Handler: com.ecommerce.lambda.NotificationHandler::handleRequest
+      Runtime: java17
+      Timeout: 30
+      MemorySize: 256
+      Environment:
+        Variables:
+          FROM_EMAIL: !Ref FromEmail
+      Policies:
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - ses:SendEmail
+                - ses:SendRawEmail
+              Resource: '*'
+      Events:
+        PaymentCompletedEvent:
+          Type: SNS
+          Properties:
+            Topic: !Ref PaymentCompletedTopic
+        OrderStatusUpdatedEvent:
+          Type: SNS
+          Properties:
+            Topic: !Ref OrderStatusUpdatedTopic
+
 Outputs:
   OrderDispatcherFunction:
     Description: Order Dispatcher Lambda Function ARN
@@ -196,4 +230,8 @@ Outputs:
 
   ProcessDeliveryFunction:
     Description: Process Delivery Lambda Function ARN
-    Value: !GetAtt ProcessDeliveryFunction.Arn 
+    Value: !GetAtt ProcessDeliveryFunction.Arn
+
+  NotificationFunction:
+    Description: Notification Lambda Function ARN
+    Value: !GetAtt NotificationFunction.Arn

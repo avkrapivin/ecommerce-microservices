@@ -72,12 +72,18 @@ public class ShippoService {
                 throw new RuntimeException("Failed to create shipment: " + shipmentResponse.getMessage());
             }
 
-            // Публикуем событие об обновлении статуса
-            publishOrderStatusUpdate(event.getOrderId(), "SHIPPING_INITIATED", shipmentResponse.getTrackingNumber());
+            // Публикуем событие об успешном создании доставки
+            publishDetailedOrderStatusUpdate(event, "SHIPPING_INITIATED", shipmentResponse.getTrackingNumber(), null);
             
             log.info("Delivery processed successfully for order {}", event.getOrderNumber());
+            
         } catch (Exception e) {
             log.error("Error processing delivery for order {}: {}", event.getOrderNumber(), e.getMessage(), e);
+            
+            // Публикуем событие об ошибке создания доставки
+            publishDetailedOrderStatusUpdate(event, "SHIPPING_FAILED", null, 
+                "Shippo API error: " + e.getMessage());
+            
             throw new RuntimeException("Failed to process delivery", e);
         }
     }
@@ -134,6 +140,33 @@ public class ShippoService {
                 throw new IOException("Failed to create shipment: " + response.code());
             }
             return objectMapper.readValue(responseBody, ShippoResponseDto.class);
+        }
+    }
+
+    /**
+     * Публикует детальное событие обновления статуса заказа
+     */
+    private void publishDetailedOrderStatusUpdate(OrderReadyForDeliveryEvent sourceEvent, String status, 
+                                                 String trackingNumber, String notes) {
+        try {
+            OrderStatusUpdateEvent statusEvent = new OrderStatusUpdateEvent();
+            statusEvent.setOrderId(sourceEvent.getOrderId());
+            statusEvent.setOrderNumber(sourceEvent.getOrderNumber());
+            statusEvent.setCustomerEmail(sourceEvent.getCustomerEmail());
+            statusEvent.setCustomerName(sourceEvent.getCustomerName());
+            statusEvent.setStatus(status);
+            statusEvent.setTrackingNumber(trackingNumber);
+            statusEvent.setNotes(notes);
+            statusEvent.setUpdatedAt(java.time.Instant.now().toString());
+            
+            String message = objectMapper.writeValueAsString(statusEvent);
+            snsPublisher.publishMessage(orderStatusUpdatedTopicArn, message);
+            log.info("Published detailed order status update for order {}: {}", 
+                sourceEvent.getOrderNumber(), status);
+                
+        } catch (Exception e) {
+            log.error("Error publishing detailed order status update: {}", e.getMessage(), e);
+            throw new RuntimeException("Failed to publish detailed order status update", e);
         }
     }
 

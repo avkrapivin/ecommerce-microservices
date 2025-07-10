@@ -17,6 +17,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.io.IOException;
+import org.mockito.ArgumentCaptor;
+import static org.mockito.ArgumentMatchers.eq;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -117,7 +119,8 @@ class ShippoServiceTest {
                 .hasMessageContaining("Failed to process delivery");
         
         wireMockServer.verify(postRequestedFor(urlEqualTo("/shipments")));
-        verify(snsPublisher, never()).publishMessage(anyString(), anyString());
+        // Должен публиковать SHIPPING_FAILED при ошибке
+        verify(snsPublisher).publishMessage(anyString(), contains("SHIPPING_FAILED"));
     }
 
     @Test
@@ -142,7 +145,8 @@ class ShippoServiceTest {
                 .hasMessageContaining("Failed to process delivery");
         
         wireMockServer.verify(postRequestedFor(urlEqualTo("/shipments")));
-        verify(snsPublisher, never()).publishMessage(anyString(), anyString());
+        // Должен публиковать SHIPPING_FAILED при ошибке
+        verify(snsPublisher).publishMessage(anyString(), contains("SHIPPING_FAILED"));
     }
 
     @Test
@@ -151,6 +155,7 @@ class ShippoServiceTest {
         assertThatThrownBy(() -> shippoService.processDelivery(null))
                 .isInstanceOf(NullPointerException.class);
         
+        // При NullPointerException публикация не происходит, так как код не доходит до publishDetailedOrderStatusUpdate
         verify(snsPublisher, never()).publishMessage(anyString(), anyString());
     }
 
@@ -167,7 +172,8 @@ class ShippoServiceTest {
                 .isInstanceOf(RuntimeException.class)
                 .hasMessageContaining("Failed to process delivery");
         
-        verify(snsPublisher, never()).publishMessage(anyString(), anyString());
+        // Должен публиковать SHIPPING_FAILED при ошибке
+        verify(snsPublisher).publishMessage(anyString(), contains("SHIPPING_FAILED"));
     }
 
     @Test
@@ -286,7 +292,70 @@ class ShippoServiceTest {
                 .isInstanceOf(RuntimeException.class)
                 .hasMessageContaining("Failed to process delivery");
         
-        verify(snsPublisher, never()).publishMessage(anyString(), anyString());
+        // Должен публиковать SHIPPING_FAILED при ошибке
+        verify(snsPublisher).publishMessage(anyString(), contains("SHIPPING_FAILED"));
+    }
+
+    @Test
+    void shouldPublishShippingInitiatedEventOnSuccess() throws IOException {
+        // Given
+        OrderReadyForDeliveryEvent event = createTestEvent();
+        event.setCustomerEmail("test@example.com");
+        event.setCustomerName("John Doe");
+        
+        ShippoResponseDto mockResponse = new ShippoResponseDto();
+        mockResponse.setStatus("SUCCESS");
+        mockResponse.setTrackingNumber("TRACK123456");
+        
+        // Mock Shippo API response
+        wireMockServer.stubFor(post(urlEqualTo("/shipments"))
+                .willReturn(aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody(objectMapper.writeValueAsString(mockResponse))));
+
+        // When
+        shippoService.processDelivery(event);
+
+        // Then
+        ArgumentCaptor<String> messageCaptor = ArgumentCaptor.forClass(String.class);
+        verify(snsPublisher).publishMessage(eq(ORDER_STATUS_UPDATED_TOPIC_ARN), messageCaptor.capture());
+        
+        String publishedMessage = messageCaptor.getValue();
+        assertThat(publishedMessage).contains("SHIPPING_INITIATED");
+        assertThat(publishedMessage).contains("test@example.com");
+        assertThat(publishedMessage).contains("John Doe");
+        assertThat(publishedMessage).contains("TRACK123456");
+        assertThat(publishedMessage).contains("ORD-123");
+    }
+
+    @Test
+    void shouldPublishShippingFailedEventOnError() {
+        // Given
+        OrderReadyForDeliveryEvent event = createTestEvent();
+        event.setCustomerEmail("test@example.com");
+        event.setCustomerName("John Doe");
+        
+        // Mock Shippo API failure
+        wireMockServer.stubFor(post(urlEqualTo("/shipments"))
+                .willReturn(aResponse()
+                        .withStatus(400)
+                        .withBody("Bad Request: Invalid address")));
+
+        // When & Then
+        assertThatThrownBy(() -> shippoService.processDelivery(event))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("Failed to process delivery");
+        
+        ArgumentCaptor<String> messageCaptor = ArgumentCaptor.forClass(String.class);
+        verify(snsPublisher).publishMessage(eq(ORDER_STATUS_UPDATED_TOPIC_ARN), messageCaptor.capture());
+        
+        String publishedMessage = messageCaptor.getValue();
+        assertThat(publishedMessage).contains("SHIPPING_FAILED");
+        assertThat(publishedMessage).contains("test@example.com");
+        assertThat(publishedMessage).contains("John Doe");
+        assertThat(publishedMessage).contains("ORD-123");
+        assertThat(publishedMessage).contains("Shippo API error");
     }
 
     @Test
