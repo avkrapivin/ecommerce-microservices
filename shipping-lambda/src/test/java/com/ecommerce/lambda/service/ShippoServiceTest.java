@@ -5,6 +5,7 @@ import com.ecommerce.lambda.dto.ShippoParcelDto;
 import com.ecommerce.lambda.dto.ShippoResponseDto;
 import com.ecommerce.lambda.dto.ShippoShipmentDto;
 import com.ecommerce.lambda.model.OrderReadyForDeliveryEvent;
+import com.ecommerce.lambda.util.AddressConverter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.WireMock;
@@ -294,7 +295,7 @@ class ShippoServiceTest {
         OrderReadyForDeliveryEvent event = createTestEvent();
         
         // When
-        ShippoAddressDto addressDto = createAddressDtoFromEvent(event);
+        ShippoAddressDto addressDto = AddressConverter.convertToShippoAddress(event);
         
         // Then
         assertThat(addressDto.getName()).isEqualTo("John Doe");
@@ -400,17 +401,7 @@ class ShippoServiceTest {
         return event;
     }
 
-    private ShippoAddressDto createAddressDtoFromEvent(OrderReadyForDeliveryEvent event) {
-        ShippoAddressDto addressDto = new ShippoAddressDto();
-        addressDto.setName(event.getCustomerName());
-        addressDto.setStreet1(event.getShippingAddress());
-        addressDto.setCity(event.getShippingCity());
-        addressDto.setState(event.getShippingState());
-        addressDto.setZip(event.getShippingZip());
-        addressDto.setCountry(event.getShippingCountry());
-        addressDto.setPhone(event.getPhoneNumber());
-        return addressDto;
-    }
+
 
     private ShippoParcelDto createParcelDtoFromEvent(OrderReadyForDeliveryEvent event) {
         ShippoParcelDto parcelDto = new ShippoParcelDto();
@@ -426,7 +417,7 @@ class ShippoServiceTest {
     private ShippoShipmentDto createShipmentDtoFromEvent(OrderReadyForDeliveryEvent event) {
         ShippoShipmentDto shipmentDto = new ShippoShipmentDto();
         shipmentDto.setAddressFrom(createFromAddress());
-        shipmentDto.setAddressTo(createAddressDtoFromEvent(event));
+        shipmentDto.setAddressTo(AddressConverter.convertToShippoAddress(event));
         shipmentDto.setParcels(java.util.List.of(createParcelDtoFromEvent(event)));
         return shipmentDto;
     }

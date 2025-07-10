@@ -57,6 +57,11 @@
             <artifactId>sns</artifactId>
             <version>${aws.sdk.version}</version>
         </dependency>
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>sesv2</artifactId>
+            <version>${aws.sdk.version}</version>
+        </dependency>
 
         <!-- Spring Cloud Function -->
         <dependency>

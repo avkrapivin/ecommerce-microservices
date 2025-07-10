@@ -7,6 +7,7 @@ import java.util.concurrent.TimeUnit;
 import com.ecommerce.lambda.dto.*;
 import com.ecommerce.lambda.model.OrderReadyForDeliveryEvent;
 import com.ecommerce.lambda.model.OrderStatusUpdateEvent;
+import com.ecommerce.lambda.util.AddressConverter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.*;
@@ -54,23 +55,10 @@ public class ShippoService {
             log.info("Processing delivery for order {}", event.getOrderNumber());
 
             // Создаем адрес получателя
-            ShippoAddressDto toAddress = new ShippoAddressDto();
-            toAddress.setName(event.getCustomerName());
-            toAddress.setStreet1(event.getShippingAddress());
-            toAddress.setCity(event.getShippingCity());
-            toAddress.setState(event.getShippingState());
-            toAddress.setZip(event.getShippingZip());
-            toAddress.setCountry(event.getShippingCountry());
-            toAddress.setPhone(event.getPhoneNumber());
+            ShippoAddressDto toAddress = AddressConverter.convertToShippoAddress(event);
 
-            // Создаем посылку из данных заказа с проверкой на null
-            ShippoParcelDto parcel = new ShippoParcelDto();
-            parcel.setLength(event.getParcelLength() != null ? event.getParcelLength() : 0.0);
-            parcel.setWidth(event.getParcelWidth() != null ? event.getParcelWidth() : 0.0);
-            parcel.setHeight(event.getParcelHeight() != null ? event.getParcelHeight() : 0.0);
-            parcel.setDistanceUnit(event.getParcelDistanceUnit() != null ? event.getParcelDistanceUnit() : "cm");
-            parcel.setWeight(event.getParcelWeight() != null ? event.getParcelWeight() : 0.0);
-            parcel.setMassUnit(event.getParcelMassUnit() != null ? event.getParcelMassUnit() : "kg");
+            // Создаем посылку из данных заказа
+            ShippoParcelDto parcel = createParcelDtoFromEvent(event);
 
             // Создаем отправление
             ShippoShipmentDto shipmentDto = new ShippoShipmentDto();
@@ -158,5 +146,21 @@ public class ShippoService {
             log.error("Error publishing order status update: {}", e.getMessage(), e);
             throw new RuntimeException("Failed to publish order status update", e);
         }
+    }
+
+
+
+    /**
+     * Создает ShippoParcelDto из OrderReadyForDeliveryEvent с проверкой на null
+     */
+    private ShippoParcelDto createParcelDtoFromEvent(OrderReadyForDeliveryEvent event) {
+        ShippoParcelDto parcel = new ShippoParcelDto();
+        parcel.setLength(event.getParcelLength() != null ? event.getParcelLength() : 0.0);
+        parcel.setWidth(event.getParcelWidth() != null ? event.getParcelWidth() : 0.0);
+        parcel.setHeight(event.getParcelHeight() != null ? event.getParcelHeight() : 0.0);
+        parcel.setDistanceUnit(event.getParcelDistanceUnit() != null ? event.getParcelDistanceUnit() : "cm");
+        parcel.setWeight(event.getParcelWeight() != null ? event.getParcelWeight() : 0.0);
+        parcel.setMassUnit(event.getParcelMassUnit() != null ? event.getParcelMassUnit() : "kg");
+        return parcel;
     }
 } 
