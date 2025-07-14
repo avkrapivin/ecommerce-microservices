@@ -55,6 +55,7 @@ aws:
   sns:
     order-unconfirmed-topic-name: OrderUnconfirmed
     order-status-updated-topic-name: OrderStatusUpdated
+    exception-topic-arn: ${AWS_SNS_EXCEPTION_TOPIC_ARN:#{@exceptionTopicArn}}
 
   
 server:

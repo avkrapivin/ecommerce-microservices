@@ -100,4 +100,26 @@ public class AwsConfig {
         }
     }
 
+    @Profile("!test")
+    @Bean
+    public String exceptionTopicArn(SnsClient snsClient) {
+        String topicName = "Exception";
+        String topicArn = "arn:aws:sns:" + region + ":" + accountId + ":" + topicName;
+
+        try {
+            // Пробуем получить атрибуты топика
+            GetTopicAttributesRequest request = GetTopicAttributesRequest.builder()
+                    .topicArn(topicArn)
+                    .build();
+
+            snsClient.getTopicAttributes(request);
+            log.info("SNS topic {} already exists", topicName);
+            return topicArn;
+        } catch (Exception e) {
+            // Если топик не существует, создаем его
+            log.info("Creating SNS topic {}", topicName);
+            return snsClient.createTopic(builder -> builder.name(topicName)).topicArn();
+        }
+    }
+
 }

@@ -79,6 +79,33 @@ Resources:
     Properties:
       TopicName: !Sub ${Environment}-OrderStatusUpdated
 
+  ExceptionTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub ${Environment}-Exception
+      DisplayName: Exception Monitoring Topic
+
+  ExceptionsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub ${Environment}-Exceptions
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: partitionKey
+          AttributeType: S
+        - AttributeName: timestamp
+          AttributeType: S
+      KeySchema:
+        - AttributeName: partitionKey
+          KeyType: HASH
+        - AttributeName: timestamp
+          KeyType: RANGE
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
+      StreamSpecification:
+        StreamViewType: NEW_AND_OLD_IMAGES
+
   OrderReadyForDeliveryFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -199,6 +226,35 @@ Resources:
           Properties:
             Topic: !Ref OrderStatusUpdatedTopic
 
+  ExceptionWatcherFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${Environment}-exception-watcher
+      CodeUri: ../shipping-lambda
+      Handler: com.ecommerce.lambda.ExceptionWatcherHandler::handleRequest
+      Runtime: java17
+      Timeout: 30
+      MemorySize: 256
+      Environment:
+        Variables:
+          EXCEPTIONS_TABLE_NAME: !Ref ExceptionsTable
+          METRICS_NAMESPACE: !Sub ECommerce/${Environment}/Exceptions
+          AWS_REGION: !Ref AWS::Region
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref ExceptionsTable
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - cloudwatch:PutMetricData
+              Resource: '*'
+      Events:
+        ExceptionEvent:
+          Type: SNS
+          Properties:
+            Topic: !Ref ExceptionTopic
+
 Outputs:
   OrderDispatcherFunction:
     Description: Order Dispatcher Lambda Function ARN
@@ -235,3 +291,15 @@ Outputs:
   NotificationFunction:
     Description: Notification Lambda Function ARN
     Value: !GetAtt NotificationFunction.Arn
+
+  ExceptionWatcherFunction:
+    Description: Exception Watcher Lambda Function ARN
+    Value: !GetAtt ExceptionWatcherFunction.Arn
+
+  ExceptionTopicArn:
+    Description: Exception SNS Topic ARN
+    Value: !Ref ExceptionTopic
+
+  ExceptionsTableName:
+    Description: Exceptions DynamoDB Table Name
+    Value: !Ref ExceptionsTable
