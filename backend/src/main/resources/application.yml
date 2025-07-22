@@ -40,6 +40,14 @@ spring:
     multipart:
       max-file-size: 10MB
       max-request-size: 10MB
+  task:
+    scheduling:
+      pool:
+        size: 3
+    execution:
+      pool:
+        core-size: 5
+        max-size: 10
 
 aws:
   region: ${AWS_REGION:us-east-1}
@@ -56,6 +64,9 @@ aws:
     order-unconfirmed-topic-name: OrderUnconfirmed
     order-status-updated-topic-name: OrderStatusUpdated
     exception-topic-arn: ${AWS_SNS_EXCEPTION_TOPIC_ARN:#{@exceptionTopicArn}}
+  sqs:
+    order-status-update-queue-name: OrderStatusUpdateQueue
+    order-status-update-dlq-name: OrderStatusUpdateDLQ
 
   
 server:

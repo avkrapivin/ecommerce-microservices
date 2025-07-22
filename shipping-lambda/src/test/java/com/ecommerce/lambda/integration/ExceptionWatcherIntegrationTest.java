@@ -5,7 +5,6 @@ import com.amazonaws.services.lambda.runtime.events.SNSEvent;
 import com.ecommerce.lambda.ExceptionWatcherHandler;
 import com.ecommerce.lambda.model.ExceptionEvent;
 import com.ecommerce.lambda.model.ExceptionLevel;
-import com.ecommerce.lambda.model.ExceptionRecord;
 import com.ecommerce.lambda.repository.ExceptionRepository;
 import com.ecommerce.lambda.service.ExceptionProcessor;
 import com.ecommerce.lambda.service.MetricsPublisher;
@@ -24,20 +23,15 @@ import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.cloudwatch.CloudWatchClient;
-import software.amazon.awssdk.services.cloudwatch.model.GetMetricStatisticsRequest;
-import software.amazon.awssdk.services.cloudwatch.model.GetMetricStatisticsResponse;
 import software.amazon.awssdk.services.cloudwatch.model.ListMetricsRequest;
 import software.amazon.awssdk.services.cloudwatch.model.ListMetricsResponse;
-import software.amazon.awssdk.services.cloudwatch.model.Statistic;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.*;
 import software.amazon.awssdk.services.sns.SnsClient;
 import software.amazon.awssdk.services.sns.model.CreateTopicRequest;
 import software.amazon.awssdk.services.sns.model.CreateTopicResponse;
-import software.amazon.awssdk.services.sns.model.PublishRequest;
 
 import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 

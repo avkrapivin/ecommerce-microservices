@@ -307,7 +307,6 @@ class CloudWatchMetricsIntegrationTest {
                     .dimensions(dimensionFilters)
                     .build();
                     
-            ListMetricsResponse listResponse = cloudWatchClient.listMetrics(listRequest);
             System.out.println("Metric " + metricName + " with dimensions - ListMetrics completed");
             
         } catch (Exception e) {

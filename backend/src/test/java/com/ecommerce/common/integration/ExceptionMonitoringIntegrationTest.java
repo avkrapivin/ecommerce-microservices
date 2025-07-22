@@ -3,20 +3,15 @@ package com.ecommerce.common.integration;
 import com.ecommerce.common.service.ExceptionPublisher;
 import com.ecommerce.common.exception.GlobalExceptionHandler;
 import com.ecommerce.common.exception.ResourceNotFoundException;
-import com.ecommerce.common.exception.ExceptionLevel;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.springframework.mock.web.MockHttpServletRequest;
 import software.amazon.awssdk.services.sns.SnsClient;
 import software.amazon.awssdk.services.sns.model.PublishRequest;
 
-import java.util.Map;
-
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 import org.mockito.ArgumentMatchers;
@@ -133,12 +128,6 @@ class ExceptionMonitoringIntegrationTest {
         
         // When
         globalExceptionHandler.handleResourceNotFound(exception, request);
-        
-        // Then - проверяем, что метод был вызван с правильными параметрами
-        ArgumentCaptor<Exception> exceptionCaptor = ArgumentCaptor.forClass(Exception.class);
-        ArgumentCaptor<ExceptionLevel> levelCaptor = ArgumentCaptor.forClass(ExceptionLevel.class);
-        ArgumentCaptor<Map> contextCaptor = ArgumentCaptor.forClass(Map.class);
-        ArgumentCaptor<String> messageCaptor = ArgumentCaptor.forClass(String.class);
         
         // Мы не можем проверить внутренние вызовы ExceptionPublisher напрямую,
         // но можем проверить что SNS был вызван

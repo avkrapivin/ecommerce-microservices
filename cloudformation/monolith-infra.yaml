@@ -41,6 +41,46 @@ Resources:
     Type: AWS::SQS::Queue
     Properties:
       QueueName: OrderStatusUpdateQueue
+      # Настройки надежности
+      VisibilityTimeoutSeconds: 60      # 1 минута на обработку сообщения
+      MessageRetentionPeriod: 1209600   # 14 дней хранения сообщений
+      ReceiveMessageWaitTimeSeconds: 20 # Long polling для эффективности
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt OrderStatusUpdateDLQ.Arn
+        maxReceiveCount: 3              # 3 попытки обработки перед отправкой в DLQ
+
+  # Dead Letter Queue для проблемных сообщений
+  OrderStatusUpdateDLQ:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: OrderStatusUpdateDLQ
+      MessageRetentionPeriod: 1209600   # 14 дней хранения в DLQ
+
+  # CloudWatch Alarm для DLQ
+  DLQMessageAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: OrderStatusUpdateDLQ-Messages
+      AlarmDescription: "Alert when messages appear in OrderStatusUpdate DLQ"
+      MetricName: ApproximateNumberOfVisibleMessages
+      Namespace: AWS/SQS
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: QueueName
+          Value: !GetAtt OrderStatusUpdateDLQ.QueueName
+      AlarmActions:
+        - !Ref DLQAlertTopic
+
+  # SNS Topic для алертов DLQ
+  DLQAlertTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: OrderStatusUpdateDLQ-Alerts
+      DisplayName: "DLQ Alert Topic"
 
   # Security Group для EC2
   MonolithSecurityGroup:
@@ -114,8 +154,13 @@ Resources:
                 Resource: !Sub "${ProductImagesBucket.Arn}/*"
               - Effect: Allow
                 Action:
-                  - sqs:*
-                Resource: '*'
+                  - sqs:ReceiveMessage
+                  - sqs:DeleteMessage
+                  - sqs:GetQueueAttributes
+                  - sqs:GetQueueUrl
+                Resource: 
+                  - !GetAtt OrderStatusUpdateQueue.Arn
+                  - !GetAtt OrderStatusUpdateDLQ.Arn
               - Effect: Allow
                 Action:
                   - ssm:GetParameter
@@ -148,17 +193,38 @@ Resources:
     Properties:
       TopicName: OrderStatusUpdated
 
-  # SNS подписка монолита на топик OrderStatusUpdated
-  OrderStatusUpdatedSubscription:
+  # SNS подписка SQS очереди на топик OrderStatusUpdated
+  OrderStatusUpdatedSqsSubscription:
     Type: AWS::SNS::Subscription
     Properties:
       TopicArn: !Ref OrderStatusUpdatedTopic
-      Protocol: https
-      Endpoint: !Sub "https://${MonolithInstance.PublicIp}:8080/api/delivery/webhook"
+      Protocol: sqs
+      Endpoint: !GetAtt OrderStatusUpdateQueue.Arn
+      # Включить raw message delivery для более простой обработки
+      RawMessageDelivery: true
       FilterPolicy: |
         {
           "Subject": ["OrderStatusUpdated"]
         }
+
+  # Политика доступа для SNS к SQS очереди
+  OrderStatusUpdateQueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: sns.amazonaws.com
+            Action:
+              - sqs:SendMessage
+            Resource: !GetAtt OrderStatusUpdateQueue.Arn
+            Condition:
+              ArnEquals:
+                aws:SourceArn: !Ref OrderStatusUpdatedTopic
+      Queues:
+        - !Ref OrderStatusUpdateQueue
 
   # Сохраняем ARN SNS топика в Parameter Store
   OrderUnconfirmedTopicArnParameter:
@@ -245,6 +311,15 @@ Outputs:
   OrderStatusUpdateQueueUrl:
     Description: URL SQS очереди для обновления статуса заказа
     Value: !Ref OrderStatusUpdateQueue
+  OrderStatusUpdateQueueArn:
+    Description: ARN SQS очереди для обновления статуса заказа
+    Value: !GetAtt OrderStatusUpdateQueue.Arn
+  OrderStatusUpdateDLQUrl:
+    Description: URL DLQ очереди для проблемных сообщений
+    Value: !Ref OrderStatusUpdateDLQ
+  OrderStatusUpdateDLQArn:
+    Description: ARN DLQ очереди для проблемных сообщений
+    Value: !GetAtt OrderStatusUpdateDLQ.Arn
   MonolithDBEndpoint:
     Description: Endpoint базы данных
     Value: !GetAtt MonolithDB.Endpoint.Address

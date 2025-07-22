@@ -31,7 +31,10 @@ logging:
 
 aws:
   region: us-east-1
-  accountId: 820242910367
+  account-id: 820242910367
+  sqs:
+    order-status-update-queue-name: test-queue
+    order-status-update-dlq-name: test-dlq
   sns:
     order-unconfirmed-topic-name: OrderUnconfirmed
     exception-topic-arn: arn:aws:sns:us-east-1:123456789012:test-exception-topic

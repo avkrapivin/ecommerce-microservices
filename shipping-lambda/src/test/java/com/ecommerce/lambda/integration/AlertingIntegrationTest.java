@@ -28,7 +28,6 @@ import software.amazon.awssdk.services.sns.model.*;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
@@ -161,9 +160,6 @@ class AlertingIntegrationTest {
 
     @Test
     void shouldTriggerHighFrequencyAlert() {
-        // Given
-        ExceptionEvent baseEvent = createTestExceptionEvent();
-        
         // When - отправляем много исключений одного типа
         for (int i = 0; i < 12; i++) { // Больше порога в 10
             ExceptionEvent event = createTestExceptionEvent();
@@ -392,7 +388,6 @@ class AlertingIntegrationTest {
     void shouldHandleGroupedAlerts() {
         // Given
         ExceptionProcessor processorWithMock = new ExceptionProcessor(exceptionRepository, mockMetricsPublisher);
-        ExceptionEvent event = createTestExceptionEvent();
         
         // When - отправляем несколько одинаковых исключений
         for (int i = 0; i < 5; i++) {

@@ -7,6 +7,8 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
+import org.springframework.scheduling.annotation.EnableAsync;
+import org.springframework.scheduling.annotation.EnableScheduling;
 import com.ecommerce.config.DotenvLoader;
 
 @SpringBootApplication(scanBasePackages = "com.ecommerce")
@@ -15,6 +17,8 @@ import com.ecommerce.config.DotenvLoader;
 @EnableJpaRepositories
 //("com.ecommerce.user.repository")
 @EnableConfigurationProperties({AwsConfig.class, AppProperties.class})
+@EnableScheduling
+@EnableAsync
 public class EcommerceApplication {
     public static void main(String[] args) {
         DotenvLoader.loadEnv();

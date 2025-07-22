@@ -16,7 +16,8 @@
 
 #### В монолите:
 - **OrderStatusUpdateListener** - обрабатывает события обновления статуса от лямбды
-- **SnsWebhookController** - получает webhook'и от SNS
+- **OrderStatusSqsListener** - опрашивает SQS очередь и обрабатывает сообщения
+- **DlqProcessor** - управляет сообщениями из Dead Letter Queue
 - **ShippoWebhookController** - получает webhook'и от Shippo
 - **ShippingService** - управляет записями о доставке и предоставляет API
 - **ShippingController** - предоставляет API для получения информации о доставке
@@ -52,11 +53,11 @@ aws:
 - URL: `https://your-domain.com/api/delivery/shippo-webhook`
 - События: `track_updated`, `transaction_created`
 
-### 4. SNS подписка
+### 4. SQS интеграция
 
-Подпишите монолит на топик `OrderStatusUpdated`:
-- Протокол: HTTPS
-- Endpoint: `https://your-domain.com/api/delivery/webhook`
+Монолит автоматически опрашивает SQS очередь `OrderStatusUpdateQueue` каждые 5 секунд.
+- При ошибках обработки сообщения отправляются в DLQ после 3 попыток
+- DLQ мониторится и логируется для ручной обработки
 
 ## API Endpoints
 
@@ -70,8 +71,16 @@ GET /shipping/tracking/{trackingNumber}
 ### Webhook'и
 
 ```
-POST /api/delivery/webhook          # SNS webhook
 POST /api/delivery/shippo-webhook   # Shippo webhook
+```
+
+### Admin API для управления DLQ
+
+```
+GET /admin/dlq/status               # Статус DLQ
+GET /admin/dlq/count                # Количество сообщений в DLQ
+POST /admin/dlq/reprocess/{id}      # Переобработка сообщения
+POST /admin/dlq/requeue/{id}        # Возврат в основную очередь
 ```
 
 ## Поток работы
@@ -79,8 +88,8 @@ POST /api/delivery/shippo-webhook   # Shippo webhook
 1. **Создание заказа**: Монолит создает заказ и запись о доставке со статусом `PENDING`
 2. **Отправка в лямбду**: Монолит публикует событие в `OrderUnconfirmed`
 3. **Обработка в лямбде**: Лямбда создает отправление в Shippo
-4. **Обновление статуса**: Лямбда публикует событие в `OrderStatusUpdated`
-5. **Получение в монолите**: Монолит обновляет статус доставки
+4. **Обновление статуса**: Лямбда публикует событие в SNS топик `OrderStatusUpdated`
+5. **SQS обработка**: SNS отправляет сообщение в SQS, монолит опрашивает очередь и обновляет статус
 6. **Webhook от Shippo**: Shippo отправляет обновления статуса напрямую в монолит
 
 ## Статусы доставки
@@ -99,23 +108,25 @@ POST /api/delivery/shippo-webhook   # Shippo webhook
 Запустите тесты:
 
 ```bash
-./mvnw test -Dtest=*WebhookControllerTest
+./mvnw test -Dtest=*ShippoWebhookControllerTest
 ./mvnw test -Dtest=*OrderStatusUpdateListenerTest
 ./mvnw test -Dtest=*ShippingServiceTest
 ./mvnw test -Dtest=*ShippingControllerTest
+./mvnw test -Dtest=*SqsIntegrationTest
 ```
 
 ## Мониторинг
 
 Логируйте следующие события:
-- Получение SNS webhook'ов
+- Обработка SQS сообщений
+- Сообщения в Dead Letter Queue
 - Обработка Shippo webhook'ов
 - Обновления статуса доставки
 - Ошибки обработки
 
 ## Безопасность
 
-- Проверяйте подпись SNS webhook'ов
+- Используйте IAM роли для доступа к SQS
 - Валидируйте данные от Shippo
-- Используйте HTTPS для всех webhook'ов
-- Ограничьте доступ к webhook endpoints 
+- Используйте HTTPS для Shippo webhook'ов
+- Ограничьте доступ к admin DLQ endpoints 
