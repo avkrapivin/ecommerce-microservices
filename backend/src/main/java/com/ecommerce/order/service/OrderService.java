@@ -253,4 +253,21 @@ public class OrderService {
         address.setEmail(request.getEmail());
         return address;
     }
+
+    // Admin methods
+    @Transactional(readOnly = true)
+    public List<OrderDto> getAllOrders(int page, int size) {
+        return orderRepository.findAll().stream()
+                .map(this::convertToDto)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<OrderDto> getRecentOrders(int limit) {
+        return orderRepository.findAll().stream()
+                .sorted((o1, o2) -> o2.getCreatedAt().compareTo(o1.getCreatedAt()))
+                .limit(limit)
+                .map(this::convertToDto)
+                .toList();
+    }
 }

@@ -6,8 +6,10 @@ import com.ecommerce.user.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -71,5 +73,31 @@ public class UserController {
     @PostMapping("/refresh-token")
     public ResponseEntity<TokenResponse> refreshToken(@Valid @RequestBody UserRefreshTokenDto refreshTokenDto) {
         return ResponseEntity.ok(userService.refreshToken(refreshTokenDto.getRefreshToken()));
+    }
+
+    // Admin endpoints
+    @GetMapping("/admin/users")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<UserProfileDto>> getAllUsers(
+            @RequestParam(required = false, defaultValue = "0") int page,
+            @RequestParam(required = false, defaultValue = "20") int size) {
+        return ResponseEntity.ok(userService.getAllUsers(page, size));
+    }
+
+    @PutMapping("/admin/users/{id}/role")
+    @PreAuthorize("hasRole('ADMIN')")  
+    public ResponseEntity<Void> updateUserRole(
+            @PathVariable Long id,
+            @RequestBody Map<String, String> request) {
+        String role = request.get("role");
+        userService.updateUserRole(id, role);
+        return ResponseEntity.ok().build();
+    }
+
+    @PutMapping("/admin/users/{id}/status")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> toggleUserStatus(@PathVariable Long id) {
+        userService.toggleUserStatus(id);
+        return ResponseEntity.ok().build();
     }
 } 

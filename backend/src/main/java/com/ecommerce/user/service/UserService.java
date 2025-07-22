@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import java.util.List;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -232,5 +233,41 @@ public class UserService {
     public User getUserById(Long id) {
         return userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
+    }
+
+    // Admin methods
+    @Transactional(readOnly = true)
+    public List<UserProfileDto> getAllUsers(int page, int size) {
+        return userRepository.findAll().stream()
+                .map(this::convertToUserProfileDto)
+                .toList();
+    }
+
+    @Transactional
+    public void updateUserRole(Long userId, String roleString) {
+        User user = getUserById(userId);
+        Role role = Role.valueOf(roleString.toUpperCase());
+        user.setRole(role);
+        userRepository.save(user);
+    }
+
+    @Transactional  
+    public void toggleUserStatus(Long userId) {
+        User user = getUserById(userId);
+        user.setEnabled(!user.isEnabled());
+        userRepository.save(user);
+    }
+
+    private UserProfileDto convertToUserProfileDto(User user) {
+        return UserProfileDto.builder()
+                .id(user.getId())
+                .email(user.getEmail())
+                .firstName(user.getFirstName())
+                .lastName(user.getLastName())
+                .role(user.getRole())
+                .enabled(user.isEnabled())
+                .createdAt(user.getCreatedAt().toString())
+                .updatedAt(user.getUpdatedAt().toString())
+                .build();
     }
 } 

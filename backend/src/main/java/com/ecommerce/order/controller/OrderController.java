@@ -7,6 +7,7 @@ import com.ecommerce.order.service.OrderService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
@@ -53,6 +54,30 @@ public class OrderController {
     public ResponseEntity<Void> cancelOrder(@PathVariable Long orderId) {
         orderService.cancelOrder(orderId);
         return ResponseEntity.ok().build();
+    }
+
+    // Admin endpoints
+    @GetMapping("/admin/orders")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<OrderDto>> getAllOrders(
+            @RequestParam(required = false, defaultValue = "0") int page,
+            @RequestParam(required = false, defaultValue = "20") int size) {
+        return ResponseEntity.ok(orderService.getAllOrders(page, size));
+    }
+
+    @GetMapping("/admin/orders/recent")  
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<OrderDto>> getRecentOrders(
+            @RequestParam(required = false, defaultValue = "10") int limit) {
+        return ResponseEntity.ok(orderService.getRecentOrders(limit));
+    }
+
+    @PutMapping("/admin/orders/{orderId}/status")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<OrderDto> adminUpdateOrderStatus(
+            @PathVariable Long orderId,
+            @RequestBody @Valid UpdateOrderStatusDto request) {
+        return ResponseEntity.ok(orderService.updateOrderStatus(orderId, request));
     }
 
 } 
