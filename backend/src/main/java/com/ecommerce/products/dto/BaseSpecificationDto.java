@@ -4,8 +4,8 @@ import jakarta.validation.constraints.*;
 import lombok.Data;
 
 @Data
-public class CreateProductSpecificationDto {
-    @NotNull(message = "Product ID is required")
+public class BaseSpecificationDto {
+    // Optional field для Create операций
     private Long productId;
 
     @NotBlank(message = "Name is required")

@@ -2,8 +2,8 @@ package com.ecommerce.products.controller;
 
 import com.ecommerce.order.event.OrderEventPublisher;
 import com.ecommerce.products.ProductIntegrationTest;
-import com.ecommerce.products.dto.CreateProductDto;
-import com.ecommerce.products.dto.UpdateProductDto;
+import com.ecommerce.products.dto.BaseProductDto;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
@@ -45,7 +45,7 @@ class ProductControllerTest extends ProductIntegrationTest {
     @Test
     @WithMockUser(username = "admin", roles = {"ADMIN"})
     void createProduct_ShouldCreateNewProduct() throws Exception {
-        CreateProductDto createProductDto = new CreateProductDto();
+        BaseProductDto createProductDto = new BaseProductDto();
         createProductDto.setName("New Product");
         createProductDto.setDescription("New Description");
         createProductDto.setPrice(BigDecimal.valueOf(200.00));
@@ -67,7 +67,7 @@ class ProductControllerTest extends ProductIntegrationTest {
     @Test
     @WithMockUser(username = "admin", roles = {"ADMIN"})
     void updateProduct_ShouldUpdateProduct() throws Exception {
-        UpdateProductDto updateProductDto = new UpdateProductDto();
+        BaseProductDto updateProductDto = new BaseProductDto();
         updateProductDto.setName("Updated Product");
         updateProductDto.setDescription("Updated Description");
         updateProductDto.setPrice(BigDecimal.valueOf(150.00));

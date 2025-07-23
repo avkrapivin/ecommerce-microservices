@@ -158,9 +158,7 @@ public class OrderServiceUnitTest {
         OrderRequest request = new OrderRequest();
         
         OrderItemRequest itemRequest = new OrderItemRequest();
-        ProductRequest productRequest = new ProductRequest();
-        productRequest.setId(1L);
-        itemRequest.setProduct(productRequest);
+        itemRequest.setProductId(1L);
         itemRequest.setQuantity(1);
         
         request.setItems(List.of(itemRequest));

@@ -54,9 +54,7 @@ public class OrderControllerIntegrationTest extends OrderIntegrationTest {
         OrderRequest request = new OrderRequest();
         
         OrderItemRequest itemRequest = new OrderItemRequest();
-        ProductRequest productRequest = new ProductRequest();
-        productRequest.setId(testProduct.getId());
-        itemRequest.setProduct(productRequest);
+        itemRequest.setProductId(testProduct.getId());
         itemRequest.setQuantity(1);
         
         request.setItems(List.of(itemRequest));

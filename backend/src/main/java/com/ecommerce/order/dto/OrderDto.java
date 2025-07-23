@@ -2,7 +2,7 @@ package com.ecommerce.order.dto;
 
 import com.ecommerce.order.entity.OrderStatus;
 import com.ecommerce.order.entity.PaymentStatus;
-import com.ecommerce.user.dto.UserDto;
+import com.ecommerce.user.dto.UserProfileDto;
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -13,7 +13,7 @@ import java.util.List;
 public class OrderDto {
     private Long id;
     private String orderNumber;
-    private UserDto user;
+    private UserProfileDto user;
     private OrderStatus status;
     private PaymentStatus paymentStatus;
     private ShippingAddressDto shippingAddress;

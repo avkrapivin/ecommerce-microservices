@@ -102,7 +102,7 @@ public class UserService {
 
     @Transactional
     @CacheEvict(value = "userProfile", key = "#token")
-    public void updateProfile(String token, UserProfileUpdateDto updateDto) {
+    public void updateProfile(String token, UserUpdateDto updateDto) {
         String cognitoId = cognitoService.extractCognitoIdFromToken(token);
         String email = cognitoService.getUserEmail(cognitoId);
         
@@ -166,7 +166,7 @@ public class UserService {
         dto.setCity(address.getCity());
         dto.setState(address.getState());
         dto.setCountry(address.getCountry());
-        dto.setZipCode(address.getZipCode());
+        dto.setPostalCode(address.getZipCode());
         return dto;
     }
 
@@ -176,7 +176,7 @@ public class UserService {
         address.setCity(dto.getCity());
         address.setState(dto.getState());
         address.setCountry(dto.getCountry());
-        address.setZipCode(dto.getZipCode());
+        address.setZipCode(dto.getPostalCode());
         return address;
     }
 

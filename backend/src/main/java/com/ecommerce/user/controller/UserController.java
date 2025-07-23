@@ -31,7 +31,7 @@ public class UserController {
     }
 
     @PostMapping("/resend-code")
-    public ResponseEntity<?> resendConfirmationCode(@Valid @RequestBody UserResendCodeDto resendCodeDto) {
+    public ResponseEntity<?> resendConfirmationCode(@Valid @RequestBody UserResetPasswordDto resendCodeDto) {
         userService.resendConfirmationCode(resendCodeDto.getEmail());
         return ResponseEntity.ok().build();
     }
@@ -49,7 +49,7 @@ public class UserController {
     @PutMapping("/profile")
     public ResponseEntity<?> updateProfile(
             @RequestHeader("Authorization") String token,
-            @Valid @RequestBody UserProfileUpdateDto updateDto) {
+            @Valid @RequestBody UserUpdateDto updateDto) {
         userService.updateProfile(token, updateDto);
         return ResponseEntity.ok().build();
     }

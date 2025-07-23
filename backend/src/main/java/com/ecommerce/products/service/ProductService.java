@@ -81,19 +81,19 @@ public class ProductService {
 
     @Transactional
     @CacheEvict(value = "products", allEntries = true)
-    public ProductDto createProduct(CreateProductDto createProductDto) {
+    public ProductDto createProduct(BaseProductDto createProductDto) {
         Product product = new Product();
-        updateProductFromCreateDto(product, createProductDto);
+        updateProductFromDto(product, createProductDto);
         return convertToDto(productRepository.save(product));
     }
 
     @Transactional
     @CacheEvict(value = "products", allEntries = true)
-    public ProductDto updateProduct(Long id, UpdateProductDto updateProductDto) {
+    public ProductDto updateProduct(Long id, BaseProductDto updateProductDto) {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + id));
         
-        updateProductFromUpdateDto(product, updateProductDto);
+        updateProductFromDto(product, updateProductDto);
         return convertToDto(productRepository.save(product));
     }
 
@@ -127,7 +127,7 @@ public class ProductService {
         return dto;
     }
 
-    private void updateProductFromCreateDto(Product product, CreateProductDto dto) {
+    private void updateProductFromDto(Product product, BaseProductDto dto) {
         product.setName(dto.getName());
         product.setDescription(dto.getDescription());
         product.setPrice(dto.getPrice());
@@ -135,18 +135,9 @@ public class ProductService {
         product.setCategory(categoryRepository.findById(dto.getCategoryId())
                 .orElseThrow(() -> new ResourceNotFoundException("Category not found with id: " + dto.getCategoryId())));
         product.setSku(dto.getSku());
-        product.setActive(true);
-    }
-
-    private void updateProductFromUpdateDto(Product product, UpdateProductDto dto) {
-        product.setName(dto.getName());
-        product.setDescription(dto.getDescription());
-        product.setPrice(dto.getPrice());
-        product.setStockQuantity(dto.getStockQuantity());
-        product.setCategory(categoryRepository.findById(dto.getCategoryId())
-                .orElseThrow(() -> new ResourceNotFoundException("Category not found with id: " + dto.getCategoryId())));
-        product.setSku(dto.getSku());
-        product.setActive(dto.isActive());
+        
+        // Если active задано явно - используем его, иначе true (для create операций)
+        product.setActive(dto.getActive() != null ? dto.getActive() : true);
     }
 
     private Sort createSort(String sortBy, String sortDirection) {

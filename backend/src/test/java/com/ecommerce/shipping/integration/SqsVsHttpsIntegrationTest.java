@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIf;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.testcontainers.containers.localstack.LocalStackContainer;
@@ -22,28 +23,45 @@ import software.amazon.awssdk.services.sns.model.*;
 import software.amazon.awssdk.services.sqs.SqsClient;
 import software.amazon.awssdk.services.sqs.model.*;
 
-import java.util.concurrent.TimeUnit;
-import java.util.Optional;
-import java.util.List;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 import static org.testcontainers.containers.localstack.LocalStackContainer.Service.SNS;
 import static org.testcontainers.containers.localstack.LocalStackContainer.Service.SQS;
 
 /**
- * Интеграционный тест для сравнения SQS и HTTPS обработки OrderStatusUpdated событий
- * Без Spring контекста - создаем компоненты вручную
+ * Интеграционный тест для сравнения SQS и HTTPS обработки событий заказов
+ * Запускается только при наличии Docker
  */
 @Testcontainers
+@EnabledIf("isDockerAvailable")
 class SqsVsHttpsIntegrationTest {
 
     @Container
     static LocalStackContainer localstack = new LocalStackContainer(DockerImageName.parse("localstack/localstack:3.0"))
             .withServices(SNS, SQS);
+
+    /**
+     * Проверяет доступность Docker для запуска TestContainers
+     */
+    static boolean isDockerAvailable() {
+        try {
+            // Пытаемся создать простой TestContainer для проверки Docker
+            org.testcontainers.DockerClientFactory.instance().client();
+            return true;
+        } catch (Exception e) {
+            System.out.println("Docker недоступен, пропускаем SqsVsHttpsIntegrationTest: " + e.getMessage());
+            return false;
+        }
+    }
 
     @Mock
     private ShippingInfoRepository shippingInfoRepository;

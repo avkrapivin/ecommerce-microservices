@@ -48,7 +48,7 @@ class ProductServiceSecurityTest {
     @Test
     void createProduct_ShouldAllowAdmin() {
         // Given
-        CreateProductDto createDto = new CreateProductDto();
+        BaseProductDto createDto = new BaseProductDto();
         createDto.setName("Test Product");
         createDto.setDescription("Test Description");
         createDto.setPrice(BigDecimal.valueOf(100));
@@ -88,7 +88,7 @@ class ProductServiceSecurityTest {
     @Test
     void createProduct_ShouldDenyRegularUser() {
         // Given
-        CreateProductDto createDto = new CreateProductDto();
+        BaseProductDto createDto = new BaseProductDto();
         createDto.setName("Test Product");
         createDto.setDescription("Test Description");
         createDto.setPrice(BigDecimal.valueOf(100));
@@ -117,7 +117,7 @@ class ProductServiceSecurityTest {
         existingProduct.setCreatedAt(LocalDateTime.now());
         existingProduct.setUpdatedAt(LocalDateTime.now());
 
-        UpdateProductDto updateDto = new UpdateProductDto();
+        BaseProductDto updateDto = new BaseProductDto();
         updateDto.setCategoryId(1L);
         updateDto.setName("New Name");
 
@@ -149,7 +149,7 @@ class ProductServiceSecurityTest {
     @Test
     void updateProduct_ShouldDenyRegularUser() {
         // Given
-        UpdateProductDto updateDto = new UpdateProductDto();
+        BaseProductDto updateDto = new BaseProductDto();
         updateDto.setName("New Name");
 
         User regularUser = new User();

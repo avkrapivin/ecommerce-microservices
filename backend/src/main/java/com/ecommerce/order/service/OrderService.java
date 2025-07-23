@@ -5,11 +5,12 @@ import com.ecommerce.order.entity.*;
 import com.ecommerce.order.event.OrderEventPublisher;
 import com.ecommerce.order.repository.OrderItemRepository;
 import com.ecommerce.order.repository.OrderRepository;
-import com.ecommerce.products.dto.UpdateProductDto;
+import com.ecommerce.products.dto.BaseProductDto;
 import com.ecommerce.products.entity.Product;
 import com.ecommerce.products.service.ProductService;
 import com.ecommerce.products.service.ProductReservationService;
 import com.ecommerce.shipping.service.ShippingService;
+import com.ecommerce.user.dto.AddressDto;
 import com.ecommerce.user.entity.User;
 import com.ecommerce.user.service.UserService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -91,7 +92,7 @@ public class OrderService {
                 throw new OrderStatusException("Item quantity must be positive");
             }
 
-            Product product = productService.getProductEntityById(itemRequest.getProduct().getId());
+            Product product = productService.getProductEntityById(itemRequest.getProductId());
 
             if (product.getPrice().compareTo(BigDecimal.ZERO) <= 0) {
                 throw new OrderStatusException("Product price must be positive");
@@ -155,8 +156,14 @@ public class OrderService {
                     throw new OrderStatusException("Insufficient stock for product: " + product.getName());
                 }
 
-                UpdateProductDto productUpdate = new UpdateProductDto();
+                BaseProductDto productUpdate = new BaseProductDto();
+                productUpdate.setName(product.getName());
+                productUpdate.setDescription(product.getDescription());
+                productUpdate.setPrice(product.getPrice());
                 productUpdate.setStockQuantity(product.getStockQuantity() - item.getQuantity());
+                productUpdate.setCategoryId(product.getCategory().getId());
+                productUpdate.setSku(product.getSku());
+                productUpdate.setActive(product.isActive());
                 productService.updateProduct(product.getId(), productUpdate);
             }
         }
@@ -230,13 +237,18 @@ public class OrderService {
         dto.setId(address.getId());
         dto.setFirstName(address.getFirstName());
         dto.setLastName(address.getLastName());
-        dto.setStreet(address.getStreet());
-        dto.setCity(address.getCity());
-        dto.setState(address.getState());
-        dto.setPostalCode(address.getPostalCode());
-        dto.setCountry(address.getCountry());
         dto.setPhoneNumber(address.getPhoneNumber());
         dto.setEmail(address.getEmail());
+        
+        // Создаем AddressDto для адресной информации
+        AddressDto addressDto = new AddressDto();
+        addressDto.setStreet(address.getStreet());
+        addressDto.setCity(address.getCity());
+        addressDto.setState(address.getState());
+        addressDto.setPostalCode(address.getPostalCode());
+        addressDto.setCountry(address.getCountry());
+        dto.setAddress(addressDto);
+        
         return dto;
     }
 

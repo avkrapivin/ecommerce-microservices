@@ -1,8 +1,10 @@
 package com.ecommerce.order.dto;
 
+import com.ecommerce.user.dto.AddressDto;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 @Data
@@ -15,20 +17,9 @@ public class ShippingAddressDto {
     @NotBlank(message = "Last name is required")
     private String lastName;
 
-    @NotBlank(message = "Street is required")
-    private String street;
-
-    @NotBlank(message = "City is required")
-    private String city;
-
-    @NotBlank(message = "State is required")
-    private String state;
-
-    @NotBlank(message = "Postal code is required")
-    private String postalCode;
-
-    @NotBlank(message = "Country is required")
-    private String country;
+    @NotNull(message = "Address is required")
+    @Valid
+    private AddressDto address;
 
     private String phoneNumber;
 

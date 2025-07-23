@@ -9,7 +9,8 @@ import com.ecommerce.order.event.OrderEventPublisher;
 import com.ecommerce.order.repository.OrderItemRepository;
 import com.ecommerce.order.repository.OrderRepository;
 import com.ecommerce.products.dto.ProductDto;
-import com.ecommerce.products.dto.UpdateProductDto;
+import com.ecommerce.products.dto.BaseProductDto;
+import com.ecommerce.products.entity.Category;
 import com.ecommerce.products.entity.Product;
 import com.ecommerce.products.service.ProductService;
 import com.ecommerce.products.service.ProductReservationService;
@@ -99,6 +100,12 @@ public class OrderServiceTest extends OrderIntegrationTest {
         testProduct.setName("Test Product");
         testProduct.setPrice(BigDecimal.valueOf(100.0));
         testProduct.setStockQuantity(10);
+        
+        // Создаем category для избежания NullPointerException
+        Category testCategory = new Category();
+        testCategory.setId(1L);
+        testCategory.setName("Test Category");
+        testProduct.setCategory(testCategory);
 
         testOrderItem = new OrderItem();
         testOrderItem.setId(1L);
@@ -122,9 +129,7 @@ public class OrderServiceTest extends OrderIntegrationTest {
 
     private OrderItemRequest createOrderItemRequest(Long productId, int quantity) {
         OrderItemRequest itemRequest = new OrderItemRequest();
-        ProductRequest productRequest = new ProductRequest();
-        productRequest.setId(productId);
-        itemRequest.setProduct(productRequest);
+        itemRequest.setProductId(productId);
         itemRequest.setQuantity(quantity);
         return itemRequest;
     }
@@ -361,7 +366,7 @@ public class OrderServiceTest extends OrderIntegrationTest {
         orderService.updateOrderStatus(1L, updateDto);
 
         // Assert
-        verify(productService).updateProduct(eq(testProduct.getId()), any(UpdateProductDto.class));
+        verify(productService).updateProduct(eq(testProduct.getId()), any(BaseProductDto.class));
     }
     
     @Test

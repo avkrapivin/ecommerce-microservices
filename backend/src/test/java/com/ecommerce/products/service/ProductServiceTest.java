@@ -1,10 +1,10 @@
 package com.ecommerce.products.service;
 
 import com.ecommerce.products.ProductIntegrationTest;
-import com.ecommerce.products.dto.CreateProductDto;
+import com.ecommerce.products.dto.BaseProductDto;
 import com.ecommerce.products.dto.ProductDto;
 import com.ecommerce.products.dto.ProductFilterDto;
-import com.ecommerce.products.dto.UpdateProductDto;
+
 import com.ecommerce.common.exception.ResourceNotFoundException;
 import com.ecommerce.order.event.OrderEventPublisher;
 
@@ -44,7 +44,7 @@ class ProductServiceTest extends ProductIntegrationTest {
 
     @Test
     void createProduct_ShouldCreateNewProduct() {
-        CreateProductDto createProductDto = new CreateProductDto();
+        BaseProductDto createProductDto = new BaseProductDto();
         createProductDto.setName("New Product");
         createProductDto.setDescription("New Description");
         createProductDto.setPrice(BigDecimal.valueOf(200.00));
@@ -61,7 +61,7 @@ class ProductServiceTest extends ProductIntegrationTest {
 
     @Test
     void updateProduct_ShouldUpdateProduct() {
-        UpdateProductDto updateProductDto = new UpdateProductDto();
+        BaseProductDto updateProductDto = new BaseProductDto();
         updateProductDto.setName("Updated Product");
         updateProductDto.setDescription("Updated Description");
         updateProductDto.setPrice(BigDecimal.valueOf(150.00));

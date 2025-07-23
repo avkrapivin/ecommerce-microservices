@@ -6,7 +6,7 @@ import java.math.BigDecimal;
 import java.util.List;
 
 @Data
-public class UpdateProductDto {
+public class BaseProductDto {
     @NotBlank(message = "Name is required")
     @Size(min = 2, max = 100, message = "Name must be between 2 and 100 characters")
     private String name;
@@ -30,8 +30,9 @@ public class UpdateProductDto {
     @Size(min = 3, max = 50, message = "SKU must be between 3 and 50 characters")
     private String sku;
 
-    private boolean active = true;
+    // Optional field for Update operations
+    private Boolean active;
 
     private List<CreateProductImageDto> images;
-    private List<CreateProductSpecificationDto> specifications;
+    private List<BaseSpecificationDto> specifications;
 } 

@@ -41,7 +41,7 @@ class ProductServiceUnitTest {
     @Test
     void createProduct_ShouldCreateProductSuccessfully() {
         // Given
-        CreateProductDto createDto = new CreateProductDto();
+        BaseProductDto createDto = new BaseProductDto();
         createDto.setName("Test Product");
         createDto.setDescription("Test Description");
         createDto.setPrice(BigDecimal.valueOf(100));
@@ -79,7 +79,7 @@ class ProductServiceUnitTest {
     @Test
     void createProduct_ShouldThrowException_WhenCategoryNotFound() {
         // Given
-        CreateProductDto createDto = new CreateProductDto();
+        BaseProductDto createDto = new BaseProductDto();
         createDto.setCategoryId(999L);
 
         when(categoryRepository.findById(999L)).thenReturn(Optional.empty());
@@ -154,7 +154,7 @@ class ProductServiceUnitTest {
         category.setName("Test Category");
         existingProduct.setCategory(category);
 
-        UpdateProductDto updateDto = new UpdateProductDto();
+        BaseProductDto updateDto = new BaseProductDto();
         updateDto.setName("New Name");
         updateDto.setDescription("New Description");
         updateDto.setPrice(BigDecimal.valueOf(100));

@@ -137,13 +137,13 @@ class UserControllerTest extends UserIntegrationTest {
     @WithMockUser(username = "test@example.com")
     void updateProfile_ShouldUpdateUserProfile() throws Exception {
         // Given
-        UserProfileUpdateDto updateDto = new UserProfileUpdateDto();
+        UserUpdateDto updateDto = new UserUpdateDto();
         updateDto.setFirstName("Updated");
         updateDto.setLastName("Name");
 
         when(jwtUtil.extractCognitoIdFromToken(anyString())).thenReturn("cognito-id");
         when(cognitoService.getUserCognitoId(anyString())).thenReturn("cognito-id");
-        doNothing().when(userService).updateProfile(anyString(), any(UserProfileUpdateDto.class));
+        doNothing().when(userService).updateProfile(anyString(), any(UserUpdateDto.class));
 
         // When & Then
         mockMvc.perform(put("/users/profile")
@@ -152,7 +152,7 @@ class UserControllerTest extends UserIntegrationTest {
                 .content(objectMapper.writeValueAsString(updateDto)))
                 .andExpect(status().isOk());
 
-        verify(userService, times(1)).updateProfile(anyString(), any(UserProfileUpdateDto.class));
+        verify(userService, times(1)).updateProfile(anyString(), any(UserUpdateDto.class));
     }
 
     @Test

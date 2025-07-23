@@ -62,7 +62,7 @@ public class ProductController {
 
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ProductDto> createProduct(@Valid @RequestBody CreateProductDto createProductDto) {
+    public ResponseEntity<ProductDto> createProduct(@Valid @RequestBody BaseProductDto createProductDto) {
         ProductDto productDto = productService.createProduct(createProductDto);
         return ResponseEntity
                 .created(URI.create("/products/" + productDto.getId()))
@@ -71,7 +71,7 @@ public class ProductController {
 
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ProductDto> updateProduct(@PathVariable Long id, @Valid @RequestBody UpdateProductDto updateProductDto) {
+    public ResponseEntity<ProductDto> updateProduct(@PathVariable Long id, @Valid @RequestBody BaseProductDto updateProductDto) {
         return ResponseEntity.ok(productService.updateProduct(id, updateProductDto));
     }
 

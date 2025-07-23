@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIf;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.testcontainers.containers.localstack.LocalStackContainer;
@@ -36,13 +37,30 @@ import static org.testcontainers.containers.localstack.LocalStackContainer.Servi
 /**
  * Тест производительности для сравнения SQS и HTTPS обработки
  * Упрощенная версия без Spring контекста
+ * 
+ * Запускается только при наличии Docker
  */
 @Testcontainers
+@EnabledIf("isDockerAvailable")
 class SqsPerformanceTest {
 
     @Container
     static LocalStackContainer localstack = new LocalStackContainer(DockerImageName.parse("localstack/localstack:3.0"))
             .withServices(SNS, SQS);
+
+    /**
+     * Проверяет доступность Docker для запуска TestContainers
+     */
+    static boolean isDockerAvailable() {
+        try {
+            // Пытаемся создать простой TestContainer для проверки Docker
+            org.testcontainers.DockerClientFactory.instance().client();
+            return true;
+        } catch (Exception e) {
+            System.out.println("Docker недоступен, пропускаем SqsPerformanceTest: " + e.getMessage());
+            return false;
+        }
+    }
 
     @Mock
     private OrderStatusUpdateListener orderStatusUpdateListener;
