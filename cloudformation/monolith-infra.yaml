@@ -1,14 +1,14 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: Инфраструктура монолита e-commerce (EC2 + RDS + S3 + SQS + Cognito)
+Description: E-commerce monolith infrastructure (EC2 + RDS + S3 + SQS + Cognito)
 
 Parameters:
   KeyName:
-    Description: SSH ключ для доступа к EC2
+    Description: SSH key for EC2 access
     Type: AWS::EC2::KeyPair::KeyName
 
 Resources:
 
-  # S3 bucket для хранения файлов
+  # S3 bucket for file storage
   ProductImagesBucket:
     Type: AWS::S3::Bucket
     Properties:
@@ -36,27 +36,27 @@ Resources:
               StringLikeIfExists:
                 s3:ObjectContentType: "image/*"
 
-  # SQS очередь для обновления статуса заказа
+  # SQS queue for order status updates
   OrderStatusUpdateQueue:
     Type: AWS::SQS::Queue
     Properties:
       QueueName: OrderStatusUpdateQueue
-      # Настройки надежности
-      VisibilityTimeoutSeconds: 60      # 1 минута на обработку сообщения
-      MessageRetentionPeriod: 1209600   # 14 дней хранения сообщений
-      ReceiveMessageWaitTimeSeconds: 20 # Long polling для эффективности
+      # Reliability settings
+      VisibilityTimeout: 60      # 1 minute for message processing
+      MessageRetentionPeriod: 1209600   # 14 days message retention
+      ReceiveMessageWaitTimeSeconds: 20 # Long polling for efficiency
       RedrivePolicy:
         deadLetterTargetArn: !GetAtt OrderStatusUpdateDLQ.Arn
-        maxReceiveCount: 3              # 3 попытки обработки перед отправкой в DLQ
+        maxReceiveCount: 3              # 3 processing attempts before sending to DLQ
 
-  # Dead Letter Queue для проблемных сообщений
+  # Dead Letter Queue for problematic messages
   OrderStatusUpdateDLQ:
     Type: AWS::SQS::Queue
     Properties:
       QueueName: OrderStatusUpdateDLQ
-      MessageRetentionPeriod: 1209600   # 14 дней хранения в DLQ
+      MessageRetentionPeriod: 1209600   # 14 days retention in DLQ
 
-  # CloudWatch Alarm для DLQ
+  # CloudWatch Alarm for DLQ
   DLQMessageAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
@@ -75,14 +75,14 @@ Resources:
       AlarmActions:
         - !Ref DLQAlertTopic
 
-  # SNS Topic для алертов DLQ
+  # SNS Topic for DLQ alerts
   DLQAlertTopic:
     Type: AWS::SNS::Topic
     Properties:
       TopicName: OrderStatusUpdateDLQ-Alerts
       DisplayName: "DLQ Alert Topic"
 
-  # Security Group для Load Balancer
+  # Security Group for Load Balancer
   LoadBalancerSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -97,7 +97,7 @@ Resources:
           ToPort: 443
           CidrIp: 0.0.0.0/0
 
-  # Security Group для Application
+  # Security Group for Application
   ApplicationSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -110,9 +110,9 @@ Resources:
         - IpProtocol: tcp
           FromPort: 22
           ToPort: 22
-          CidrIp: 10.0.0.0/8  # Только из private network
+          CidrIp: 10.0.0.0/8  # Only from private network
 
-  # Security Group для Database
+  # Security Group for Database
   DatabaseSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -123,7 +123,7 @@ Resources:
           ToPort: 5432
           SourceSecurityGroupId: !Ref ApplicationSecurityGroup
 
-  # Secrets Manager для DB пароля
+  # Secrets Manager for DB password
   DatabaseSecret:
     Type: AWS::SecretsManager::Secret
     Properties:
@@ -135,13 +135,13 @@ Resources:
         PasswordLength: 16
         ExcludeCharacters: '"@/\'
 
-  # EC2 instance для монолита
+  # EC2 instance for monolith
   MonolithInstance:
     Type: AWS::EC2::Instance
     Properties:
       InstanceType: t2.micro
       KeyName: !Ref KeyName
-      ImageId: ami-0c02fb55956c7d316 # Amazon Linux 2 (замени на актуальный региональный ami)
+      ImageId: ami-0c02fb55956c7d316 # Amazon Linux 2 (replace with current regional ami)
       SecurityGroupIds:
         - !Ref ApplicationSecurityGroup
       IamInstanceProfile: !Ref MonolithInstanceProfile
@@ -165,36 +165,19 @@ Resources:
       AllocatedStorage: 20
       DBInstanceClass: db.t3.micro
       Engine: postgres
-      EngineVersion: "15.3"
+      EngineVersion: "15.8"
       ManageMasterUserPassword: true
       MasterUserSecret:
         SecretArn: !Ref DatabaseSecret
       VPCSecurityGroups:
         - !Ref DatabaseSecurityGroup
-      PubliclyAccessible: false  # Безопасность: только из private network
-      BackupRetentionPeriod: 7   # 7 дней бэкапов
-      MultiAZ: false             # Для продакшена установить true
+      PubliclyAccessible: false  # Security: only from private network
+      BackupRetentionPeriod: 7   # 7 days backups
+      MultiAZ: false             # Set to true for production
       StorageType: gp3
-      StorageEncrypted: true     # Шифрование storage
-      PerformanceInsightsEnabled: true
-      MonitoringInterval: 60
-      MonitoringRoleArn: !GetAtt RDSEnhancedMonitoringRole.Arn
+      StorageEncrypted: true     # Storage encryption
 
-  # IAM роль для RDS Enhanced Monitoring
-  RDSEnhancedMonitoringRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service: [monitoring.rds.amazonaws.com]
-            Action: ['sts:AssumeRole']
-      ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/service-role/AmazonRDSEnhancedMonitoringRole
-
-  # IAM роль для EC2 (доступ к S3, SQS, Secrets Manager)
+  # IAM role for EC2 (access to S3, SQS, Secrets Manager)
   MonolithInstanceRole:
     Type: AWS::IAM::Role
     Properties:
@@ -240,7 +223,6 @@ Resources:
                 Action:
                   - sns:Publish
                   - sns:Subscribe
-                  - sns:Receive
                 Resource: 
                   - !Ref OrderUnconfirmedTopic
                   - !Ref OrderStatusUpdatedTopic
@@ -264,33 +246,33 @@ Resources:
       Roles:
         - !Ref MonolithInstanceRole
 
-  # SNS топик для событий неподтверждённого заказа
+  # SNS topic for unconfirmed order events
   OrderUnconfirmedTopic:
     Type: AWS::SNS::Topic
     Properties:
       TopicName: OrderUnconfirmed
 
-  # SNS топик для обновлений статуса заказа
+  # SNS topic for order status updates
   OrderStatusUpdatedTopic:
     Type: AWS::SNS::Topic
     Properties:
       TopicName: OrderStatusUpdated
 
-  # SNS подписка SQS очереди на топик OrderStatusUpdated
+  # SNS subscription of SQS queue to OrderStatusUpdated topic
   OrderStatusUpdatedSqsSubscription:
     Type: AWS::SNS::Subscription
     Properties:
       TopicArn: !Ref OrderStatusUpdatedTopic
       Protocol: sqs
       Endpoint: !GetAtt OrderStatusUpdateQueue.Arn
-      # Включить raw message delivery для более простой обработки
+      # Enable raw message delivery for simpler processing
       RawMessageDelivery: true
       FilterPolicy: |
         {
           "Subject": ["OrderStatusUpdated"]
         }
 
-  # Политика доступа для SNS к SQS очереди
+  # Access policy for SNS to SQS queue
   OrderStatusUpdateQueuePolicy:
     Type: AWS::SQS::QueuePolicy
     Properties:
@@ -309,23 +291,23 @@ Resources:
       Queues:
         - !Ref OrderStatusUpdateQueue
 
-  # Сохраняем ARN SNS топика в Parameter Store
+  # Save SNS topic ARN in Parameter Store
   OrderUnconfirmedTopicArnParameter:
     Type: AWS::SSM::Parameter
     Properties:
       Name: /ecommerce/sns/order-unconfirmed-topic-arn
       Type: String
       Value: !Ref OrderUnconfirmedTopic
-      Description: ARN SNS топика для неподтверждённых заказов
+      Description: SNS topic ARN for unconfirmed orders
 
-  # Сохраняем ARN SNS топика OrderStatusUpdated в Parameter Store
+  # Save SNS topic OrderStatusUpdated ARN in Parameter Store
   OrderStatusUpdatedTopicArnParameter:
     Type: AWS::SSM::Parameter
     Properties:
       Name: /ecommerce/sns/order-status-updated-topic-arn
       Type: String
       Value: !Ref OrderStatusUpdatedTopic
-      Description: ARN SNS топика для обновлений статуса заказа
+      Description: SNS topic ARN for order status updates
 
   # Cognito User Pool
   CognitoUserPool:
@@ -386,31 +368,31 @@ Resources:
 
 Outputs:
   MonolithInstancePublicIp:
-    Description: Public IP монолита
+    Description: Monolith public IP
     Value: !GetAtt MonolithInstance.PublicIp
   ProductImagesBucketName:
-    Description: Имя S3 бакета для изображений
+    Description: S3 bucket name for images
     Value: !Ref ProductImagesBucket
   OrderStatusUpdateQueueUrl:
-    Description: URL SQS очереди для обновления статуса заказа
+    Description: SQS queue URL for order status updates
     Value: !Ref OrderStatusUpdateQueue
   OrderStatusUpdateQueueArn:
-    Description: ARN SQS очереди для обновления статуса заказа
+    Description: SQS queue ARN for order status updates
     Value: !GetAtt OrderStatusUpdateQueue.Arn
   OrderStatusUpdateDLQUrl:
-    Description: URL DLQ очереди для проблемных сообщений
+    Description: DLQ URL for problematic messages
     Value: !Ref OrderStatusUpdateDLQ
   OrderStatusUpdateDLQArn:
-    Description: ARN DLQ очереди для проблемных сообщений
+    Description: DLQ ARN for problematic messages
     Value: !GetAtt OrderStatusUpdateDLQ.Arn
   MonolithDBEndpoint:
-    Description: Endpoint базы данных
+    Description: Database endpoint
     Value: !GetAtt MonolithDB.Endpoint.Address
   OrderUnconfirmedTopicArn:
-    Description: ARN SNS топика OrderUnconfirmed
+    Description: OrderUnconfirmed SNS topic ARN
     Value: !Ref OrderUnconfirmedTopic
   OrderStatusUpdatedTopicArn:
-    Description: ARN SNS топика OrderStatusUpdated
+    Description: OrderStatusUpdated SNS topic ARN
     Value: !Ref OrderStatusUpdatedTopic
   CognitoUserPoolId:
     Description: ID of the created Cognito User Pool

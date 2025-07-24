@@ -39,7 +39,7 @@ Resources:
       MemorySize: 256
       Environment:
         Variables:
-          AWS_REGION: !Ref AWS::Region
+          REGION: !Ref AWS::Region
           PAYMENT_COMPLETED_TOPIC_ARN: !Ref PaymentCompletedTopic
           PAYMENT_SUSPICIOUS_TOPIC_ARN: !Ref PaymentSuspiciousTopic
           ORDER_STATUS_UPDATED_TOPIC_ARN: !Ref OrderStatusUpdatedTopic
@@ -239,7 +239,7 @@ Resources:
         Variables:
           EXCEPTIONS_TABLE_NAME: !Ref ExceptionsTable
           METRICS_NAMESPACE: !Sub ECommerce/${Environment}/Exceptions
-          AWS_REGION: !Ref AWS::Region
+          REGION: !Ref AWS::Region
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref ExceptionsTable
