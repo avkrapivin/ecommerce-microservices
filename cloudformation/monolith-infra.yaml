@@ -82,24 +82,58 @@ Resources:
       TopicName: OrderStatusUpdateDLQ-Alerts
       DisplayName: "DLQ Alert Topic"
 
-  # Security Group для EC2
-  MonolithSecurityGroup:
+  # Security Group для Load Balancer
+  LoadBalancerSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: Доступ к монолиту и БД
+      GroupDescription: Load balancer security group
       SecurityGroupIngress:
         - IpProtocol: tcp
-          FromPort: 22
-          ToPort: 22
-          CidrIp: 0.0.0.0/0 # Для теста, потом ограничить!
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+
+  # Security Group для Application
+  ApplicationSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Application security group
+      SecurityGroupIngress:
         - IpProtocol: tcp
           FromPort: 8080
           ToPort: 8080
-          CidrIp: 0.0.0.0/0 # Для теста, потом ограничить!
+          SourceSecurityGroupId: !Ref LoadBalancerSecurityGroup
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 10.0.0.0/8  # Только из private network
+
+  # Security Group для Database
+  DatabaseSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Database security group
+      SecurityGroupIngress:
         - IpProtocol: tcp
           FromPort: 5432
           ToPort: 5432
-          SourceSecurityGroupId: !Ref MonolithSecurityGroup
+          SourceSecurityGroupId: !Ref ApplicationSecurityGroup
+
+  # Secrets Manager для DB пароля
+  DatabaseSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: !Sub "${AWS::StackName}-db-credentials"
+      Description: "Database credentials for ecommerce application"
+      GenerateSecretString:
+        SecretStringTemplate: '{"username": "ecommerce_user"}'
+        GenerateStringKey: "password"
+        PasswordLength: 16
+        ExcludeCharacters: '"@/\'
 
   # EC2 instance для монолита
   MonolithInstance:
@@ -109,11 +143,19 @@ Resources:
       KeyName: !Ref KeyName
       ImageId: ami-0c02fb55956c7d316 # Amazon Linux 2 (замени на актуальный региональный ami)
       SecurityGroupIds:
-        - !Ref MonolithSecurityGroup
+        - !Ref ApplicationSecurityGroup
       IamInstanceProfile: !Ref MonolithInstanceProfile
       Tags:
         - Key: Name
           Value: ecommerce-monolith
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          yum update -y
+          yum install -y java-17-amazon-corretto-headless
+          # Install CloudWatch agent
+          wget https://s3.amazonaws.com/amazoncloudwatch-agent/amazon_linux/amd64/latest/amazon-cloudwatch-agent.rpm
+          rpm -U ./amazon-cloudwatch-agent.rpm
 
   # RDS PostgreSQL
   MonolithDB:
@@ -124,13 +166,35 @@ Resources:
       DBInstanceClass: db.t3.micro
       Engine: postgres
       EngineVersion: "15.3"
-      MasterUsername: admin
-      MasterUserPassword: adminpassword # Лучше использовать SecretsManager!
+      ManageMasterUserPassword: true
+      MasterUserSecret:
+        SecretArn: !Ref DatabaseSecret
       VPCSecurityGroups:
-        - !Ref MonolithSecurityGroup
-      PubliclyAccessible: true # Для теста, потом убрать
+        - !Ref DatabaseSecurityGroup
+      PubliclyAccessible: false  # Безопасность: только из private network
+      BackupRetentionPeriod: 7   # 7 дней бэкапов
+      MultiAZ: false             # Для продакшена установить true
+      StorageType: gp3
+      StorageEncrypted: true     # Шифрование storage
+      PerformanceInsightsEnabled: true
+      MonitoringInterval: 60
+      MonitoringRoleArn: !GetAtt RDSEnhancedMonitoringRole.Arn
 
-  # IAM роль для EC2 (доступ к S3 и SQS)
+  # IAM роль для RDS Enhanced Monitoring
+  RDSEnhancedMonitoringRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: [monitoring.rds.amazonaws.com]
+            Action: ['sts:AssumeRole']
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonRDSEnhancedMonitoringRole
+
+  # IAM роль для EC2 (доступ к S3, SQS, Secrets Manager)
   MonolithInstanceRole:
     Type: AWS::IAM::Role
     Properties:
@@ -151,13 +215,19 @@ Resources:
                 Action:
                   - s3:PutObject
                   - s3:GetObject
+                  - s3:DeleteObject
                 Resource: !Sub "${ProductImagesBucket.Arn}/*"
+              - Effect: Allow
+                Action:
+                  - s3:ListBucket
+                Resource: !Ref ProductImagesBucket
               - Effect: Allow
                 Action:
                   - sqs:ReceiveMessage
                   - sqs:DeleteMessage
                   - sqs:GetQueueAttributes
                   - sqs:GetQueueUrl
+                  - sqs:SendMessage
                 Resource: 
                   - !GetAtt OrderStatusUpdateQueue.Arn
                   - !GetAtt OrderStatusUpdateDLQ.Arn
@@ -174,6 +244,19 @@ Resources:
                 Resource: 
                   - !Ref OrderUnconfirmedTopic
                   - !Ref OrderStatusUpdatedTopic
+              - Effect: Allow
+                Action:
+                  - secretsmanager:GetSecretValue
+                Resource: !Ref DatabaseSecret
+              - Effect: Allow
+                Action:
+                  - cloudwatch:PutMetricData
+                  - cloudwatch:GetMetricStatistics
+                  - cloudwatch:ListMetrics
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: "*"
 
   MonolithInstanceProfile:
     Type: AWS::IAM::InstanceProfile

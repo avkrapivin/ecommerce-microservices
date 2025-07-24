@@ -6,6 +6,18 @@ spring:
     username: ${SPRING_DATASOURCE_USERNAME}
     password: ${SPRING_DATASOURCE_PASSWORD}
     driver-class-name: org.postgresql.Driver
+    # HikariCP Connection Pool Configuration
+    hikari:
+      maximum-pool-size: 20              # Максимум 20 соединений
+      minimum-idle: 5                    # Минимум 5 idle соединений
+      connection-timeout: 20000          # 20 секунд таймаут подключения
+      idle-timeout: 300000               # 5 минут idle timeout
+      max-lifetime: 1200000              # 20 минут максимальная жизнь соединения
+      leak-detection-threshold: 60000    # 60 секунд для детекции утечек
+      connection-test-query: SELECT 1    # Тест соединения
+      pool-name: EcommerceHikariPool
+      # Performance optimizations
+      auto-commit: false                 # Отключаем auto-commit для лучшей производительности
   jpa:
     hibernate:
       ddl-auto: update
@@ -35,7 +47,7 @@ spring:
   cache:
     type: caffeine
     caffeine:
-      spec: maximumSize=500,expireAfterWrite=3600s
+      spec: maximumSize=1000,expireAfterWrite=1800s,recordStats
   servlet:
     multipart:
       max-file-size: 10MB
@@ -80,6 +92,8 @@ logging:
     org.springframework: INFO
     org.springframework.security: DEBUG
     software.amazon.awssdk: DEBUG
+    com.zaxxer.hikari: DEBUG              # Логирование HikariCP
+    org.springframework.cache: DEBUG      # Логирование кэша
 
 app:
   logout:
