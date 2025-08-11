@@ -1,0 +1,43 @@
+# Local development files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Docker volumes
+postgres_data/
+localstack_data/
+redis_data/
+
+# Backend uploads
+backend/uploads/
+backend/logs/
+
+# IDE files
+.vscode/
+.idea/
+*.iml
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Node modules (when frontend is created)
+frontend/node_modules/
+frontend/dist/
+frontend/.env.local
+
+# Maven
+backend/target/
+backend/.mvn/
+backend/mvnw
+backend/mvnw.cmd
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.temp 

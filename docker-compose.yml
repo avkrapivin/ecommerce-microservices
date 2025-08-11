@@ -1,0 +1,93 @@
+services:
+  # Spring Boot Backend
+  backend:
+    build: ./backend
+    container_name: ecommerce-backend
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=local
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+      - AWS_DEFAULT_REGION=us-east-1
+      - AWS_ENDPOINT_URL=http://ecommerce-localstack:4566
+    depends_on:
+      postgres:
+        condition: service_healthy
+      localstack:
+        condition: service_healthy
+    networks:
+      - ecommerce-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15
+    container_name: ecommerce-postgres
+    environment:
+      - 'POSTGRES_DB=ecommerce'
+      - 'POSTGRES_USER=postgres'
+      - 'POSTGRES_PASSWORD=postgres'
+      - 'POSTGRES_INITDB_ARGS=--encoding=UTF-8 --lc-collate=C --lc-ctype=C'
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db:/docker-entrypoint-initdb.d
+    networks:
+      - ecommerce-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d ecommerce"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # LocalStack for AWS services
+  localstack:
+    image: localstack/localstack:latest
+    container_name: ecommerce-localstack
+    environment:
+      - SERVICES=s3,sqs,sns,secretsmanager,dynamodb
+      - DEBUG=0
+      - AWS_DEFAULT_REGION=us-east-1
+      - EDGE_PORT=4566
+      - EDGE_BIND_HOST=0.0.0.0
+      - PERSISTENCE=0
+    ports:
+      - "4566:4566"
+    volumes:
+      - ./localstack-init:/etc/localstack/init/ready.d
+    networks:
+      - ecommerce-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4566/_localstack/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+
+
+  # Adminer for database management
+  adminer:
+    image: adminer:latest
+    container_name: ecommerce-adminer
+    ports:
+      - "8081:8080"
+    environment:
+      ADMINER_DEFAULT_SERVER: postgres
+    networks:
+      - ecommerce-network
+    depends_on:
+      - postgres
+
+volumes:
+  postgres_data:
+
+networks:
+  ecommerce-network:
+    driver: bridge 

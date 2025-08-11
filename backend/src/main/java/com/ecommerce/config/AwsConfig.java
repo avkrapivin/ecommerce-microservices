@@ -48,12 +48,20 @@ public class AwsConfig {
                 .build();
     }
 
+    @Value("${aws.sns.endpoint:}")
+    private String snsEndpoint;
+
     @Bean
     public SnsClient snsClient() {
         log.info("Creating SNS client for region: {}", region);
-        return SnsClient.builder()
-                .region(Region.of(region))
-                .build();
+        var builder = SnsClient.builder()
+                .region(Region.of(region));
+        
+        if (snsEndpoint != null && !snsEndpoint.isEmpty()) {
+            builder.endpointOverride(java.net.URI.create(snsEndpoint));
+        }
+        
+        return builder.build();
     }
 
     @Profile("!test")

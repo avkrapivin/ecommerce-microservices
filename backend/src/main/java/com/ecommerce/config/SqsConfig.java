@@ -9,6 +9,7 @@ import org.springframework.context.annotation.Profile;
 import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.sqs.SqsClient;
+import software.amazon.awssdk.services.sqs.SqsClientBuilder;
 import software.amazon.awssdk.services.sqs.model.GetQueueUrlRequest;
 import software.amazon.awssdk.services.sqs.model.GetQueueUrlResponse;
 
@@ -28,13 +29,21 @@ public class SqsConfig {
     @Value("${aws.sqs.order-status-update-dlq-name}")
     private String orderStatusUpdateDlqName;
 
+    @Value("${aws.sqs.endpoint:}")
+    private String sqsEndpoint;
+
     @Profile("!test")
     @Bean
     public SqsClient sqsClient() {
-        return SqsClient.builder()
+        SqsClientBuilder builder = SqsClient.builder()
                 .region(Region.of(region))
-                .credentialsProvider(DefaultCredentialsProvider.create())
-                .build();
+                .credentialsProvider(DefaultCredentialsProvider.create());
+        
+        if (sqsEndpoint != null && !sqsEndpoint.isEmpty()) {
+            builder.endpointOverride(java.net.URI.create(sqsEndpoint));
+        }
+        
+        return builder.build();
     }
 
     @Profile("!test")
@@ -43,7 +52,6 @@ public class SqsConfig {
         try {
             GetQueueUrlRequest request = GetQueueUrlRequest.builder()
                     .queueName(orderStatusUpdateQueueName)
-                    .queueOwnerAWSAccountId(accountId)
                     .build();
 
             GetQueueUrlResponse response = sqsClient.getQueueUrl(request);
@@ -62,7 +70,6 @@ public class SqsConfig {
         try {
             GetQueueUrlRequest request = GetQueueUrlRequest.builder()
                     .queueName(orderStatusUpdateDlqName)
-                    .queueOwnerAWSAccountId(accountId)
                     .build();
 
             GetQueueUrlResponse response = sqsClient.getQueueUrl(request);

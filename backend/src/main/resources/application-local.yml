@@ -1,0 +1,106 @@
+spring:
+  config:
+    import: optional:classpath:.env
+  datasource:
+    url: jdbc:postgresql://postgres:5432/ecommerce
+    username: postgres
+    password: postgres
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      connection-timeout: 20000
+      idle-timeout: 300000
+      max-lifetime: 1200000
+      leak-detection-threshold: 60000
+      connection-test-query: SELECT 1
+      pool-name: EcommerceHikariPool
+      auto-commit: false
+      initialization-fail-timeout: -1
+      validation-timeout: 3000
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+  security:
+    oauth2:
+      enabled: false
+  cache:
+    type: caffeine
+    caffeine:
+      spec: maximumSize=500,expireAfterWrite=900s,recordStats
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+  task:
+    scheduling:
+      pool:
+        size: 2
+    execution:
+      pool:
+        core-size: 3
+        max-size: 5
+
+aws:
+  region: us-east-1
+  accountId: 000000000000
+  endpoint: http://ecommerce-localstack:4566
+  s3:
+    bucket-name: local-product-images
+    access-key-id: test
+    secret-access-key: test
+    endpoint: http://ecommerce-localstack:4566
+  cognito:
+    user-pool-id: local-user-pool
+    client-id: local-client-id
+    client-secret: local-client-secret
+    endpoint: http://ecommerce-localstack:4566
+  sns:
+    order-unconfirmed-topic-name: OrderUnconfirmed
+    order-status-updated-topic-name: OrderStatusUpdated
+    exception-topic-arn: arn:aws:sns:us-east-1:123456789012:Exception
+    endpoint: http://ecommerce-localstack:4566
+  sqs:
+    order-status-update-queue-name: OrderStatusUpdateQueue
+    order-status-update-dlq-name: OrderStatusUpdateDLQ
+    endpoint: http://ecommerce-localstack:4566
+  secretsmanager:
+    endpoint: http://ecommerce-localstack:4566
+
+server:
+  port: 8080
+  servlet:
+    context-path: /api
+
+logging:
+  level:
+    com.ecommerce: DEBUG
+    org.springframework: INFO
+    org.springframework.security: DEBUG
+    software.amazon.awssdk: DEBUG
+    com.zaxxer.hikari: INFO
+    org.springframework.cache: DEBUG
+
+app:
+  logout:
+    redirect-url: http://localhost:3000/auth/signout
+  upload:
+    dir: ./uploads
+
+paypal:
+  client:
+    id: test-paypal-client-id
+    secret: test-paypal-client-secret
+  mode: sandbox
+
+# Disable security for local development (only for testing)
+security:
+  basic:
+    enabled: false
+  oauth2:
+    enabled: false 
