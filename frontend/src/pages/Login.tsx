@@ -1,9 +1,17 @@
-import { Button, Card, Form, Input, Typography } from 'antd';
+import { Button, Card, Form, Input, Typography, message } from 'antd';
+import { login } from '../shared/api/auth';
 
 export function Login() {
+  const [form] = Form.useForm();
+
   const onFinish = async (values: { email: string; password: string }) => {
-    // TODO: implement login with HTTP-only cookies
-    console.log(values);
+    try {
+      await login(values);
+      message.success('Signed in successfully');
+      window.location.href = '/';
+    } catch (err: any) {
+      message.error(err?.response?.data?.message ?? 'Failed to sign in');
+    }
   };
 
   return (
@@ -11,7 +19,7 @@ export function Login() {
       <Typography.Title level={3} style={{ textAlign: 'center' }}>
         Sign in
       </Typography.Title>
-      <Form layout="vertical" onFinish={onFinish}>
+      <Form layout="vertical" form={form} onFinish={onFinish}>
         <Form.Item label="Email" name="email" rules={[{ required: true, type: 'email' }]}>
           <Input autoComplete="email" />
         </Form.Item>

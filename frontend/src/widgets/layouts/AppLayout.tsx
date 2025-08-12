@@ -1,11 +1,32 @@
-import { Layout, Menu, Typography } from 'antd';
+import { Layout, Menu, Typography, Button, Space, message } from 'antd';
 import { Link, Outlet, useLocation } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { getProfile, logout } from '../../shared/api/auth';
 
 const { Header, Content, Footer } = Layout;
 
 export function AppLayout() {
   const location = useLocation();
   const selectedKey = `/${location.pathname.split('/')[1] ?? ''}`;
+
+  const [profileEmail, setProfileEmail] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Try to load profile to determine auth state
+    getProfile()
+      .then((p) => setProfileEmail(p.email))
+      .catch(() => setProfileEmail(null));
+  }, [location.pathname]);
+
+  const onLogout = async () => {
+    try {
+      await logout();
+      message.success('Signed out');
+      window.location.href = '/';
+    } catch {
+      message.error('Failed to sign out');
+    }
+  };
 
   return (
     <Layout style={{ minHeight: '100vh' }}>
@@ -24,6 +45,18 @@ export function AppLayout() {
           ]}
           style={{ flex: 1 }}
         />
+        <Space>
+          {profileEmail ? (
+            <>
+              <Typography.Text style={{ color: '#fff' }}>{profileEmail}</Typography.Text>
+              <Button onClick={onLogout}>Logout</Button>
+            </>
+          ) : (
+            <Link to="/auth/login">
+              <Button type="primary">Sign in</Button>
+            </Link>
+          )}
+        </Space>
       </Header>
       <Content style={{ padding: '24px', maxWidth: 1200, margin: '0 auto', width: '100%' }}>
         <Outlet />
