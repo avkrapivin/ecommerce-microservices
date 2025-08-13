@@ -2,9 +2,11 @@ package com.ecommerce.products.service;
 
 import com.ecommerce.products.dto.*;
 import com.ecommerce.products.entity.Product;
+import com.ecommerce.products.entity.ProductImage;
+import com.ecommerce.products.entity.ProductReview;
+import com.ecommerce.products.entity.ProductSpecification;
 import com.ecommerce.products.repository.ProductRepository;
 import com.ecommerce.products.repository.CategoryRepository;
-import com.ecommerce.products.specification.ProductSpecification;
 import com.ecommerce.common.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
@@ -60,7 +62,7 @@ public class ProductService {
     @Cacheable(value = "products", key = "#filter.toString()")
     public Page<ProductDto> getProducts(ProductFilterDto filter) {
         // Создаем спецификацию для фильтрации
-        ProductSpecification specification = new ProductSpecification(filter);
+        com.ecommerce.products.specification.ProductSpecification specification = new com.ecommerce.products.specification.ProductSpecification(filter);
 
         // Создаем сортировку
         Sort sort = createSort(filter.getSortBy(), filter.getSortDirection());
@@ -124,6 +126,31 @@ public class ProductService {
         dto.setActive(product.isActive());
         dto.setCreatedAt(product.getCreatedAt().toString());
         dto.setUpdatedAt(product.getUpdatedAt().toString());
+        
+        // Convert images
+        if (product.getImages() != null) {
+            List<ProductImageDto> imageDtos = product.getImages().stream()
+                .map(this::convertImageToDto)
+                .collect(Collectors.toList());
+            dto.setImages(imageDtos);
+        }
+        
+        // Convert reviews
+        if (product.getReviews() != null) {
+            List<ProductReviewDto> reviewDtos = product.getReviews().stream()
+                .map(this::convertReviewToDto)
+                .collect(Collectors.toList());
+            dto.setReviews(reviewDtos);
+        }
+        
+        // Convert specifications
+        if (product.getSpecifications() != null) {
+            List<ProductSpecificationDto> specDtos = product.getSpecifications().stream()
+                .map(this::convertSpecificationToDto)
+                .collect(Collectors.toList());
+            dto.setSpecifications(specDtos);
+        }
+        
         return dto;
     }
 
@@ -151,5 +178,41 @@ public class ProductService {
         }
 
         return Sort.by(direction, sortBy);
+    }
+    
+    private ProductImageDto convertImageToDto(ProductImage image) {
+        ProductImageDto dto = new ProductImageDto();
+        dto.setId(image.getId());
+        dto.setProductId(image.getProduct().getId());
+        dto.setImageUrl(image.getImageUrl());
+        // Optional metadata may be null in current schema; skip if absent
+        if (image.getFileName() != null) dto.setFileName(image.getFileName());
+        if (image.getFileType() != null) dto.setFileType(image.getFileType());
+        if (image.getFileSize() != null) dto.setFileSize(image.getFileSize());
+        dto.setMain(image.isMain());
+        dto.setCreatedAt(image.getCreatedAt().toString());
+        dto.setUpdatedAt(image.getUpdatedAt().toString());
+        return dto;
+    }
+    
+    private ProductReviewDto convertReviewToDto(ProductReview review) {
+        ProductReviewDto dto = new ProductReviewDto();
+        dto.setId(review.getId());
+        dto.setRating(review.getRating());
+        dto.setComment(review.getComment());
+        dto.setUserName(review.getUser().getFirstName() + " " + review.getUser().getLastName());
+        dto.setCreatedAt(review.getCreatedAt());
+        return dto;
+    }
+    
+    private ProductSpecificationDto convertSpecificationToDto(ProductSpecification spec) {
+        ProductSpecificationDto dto = new ProductSpecificationDto();
+        dto.setId(spec.getId());
+        dto.setProductId(spec.getProduct().getId());
+        dto.setName(spec.getName());
+        dto.setSpecValue(spec.getSpecValue());
+        dto.setCreatedAt(spec.getCreatedAt());
+        dto.setUpdatedAt(spec.getUpdatedAt());
+        return dto;
     }
 } 

@@ -16,7 +16,7 @@ public class ProductSpecification {
     @JoinColumn(name = "product_id", nullable = false)
     private Product product;
 
-    @Column(name = "spec_name", nullable = false)
+    @Column(name = "name", nullable = false)
     private String name;
 
     @Column(name = "spec_value", nullable = false)

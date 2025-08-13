@@ -21,13 +21,16 @@ public class ProductImage {
     @Column(nullable = false)
     private String imageUrl;
 
-    @Column(nullable = false)
+    // These fields are not present in the current DB schema. Mark as transient
+    // to avoid SQL errors when reading from DB. They can be populated at runtime
+    // by upload flows, but are not persisted.
+    @Transient
     private String fileName;
 
-    @Column(nullable = false)
+    @Transient
     private String fileType;
 
-    @Column(nullable = false)
+    @Transient
     private Long fileSize;
 
     @Column(nullable = false)
