@@ -2,6 +2,7 @@ import { PropsWithChildren, useMemo } from 'react';
 import { ConfigProvider, theme as antdTheme } from 'antd';
 import enUS from 'antd/locale/en_US';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { CartProvider } from '../contexts/CartContext';
 
 // Create a single QueryClient instance for the app
 const queryClient = new QueryClient({
@@ -26,7 +27,11 @@ export function AppProviders({ children }: PropsWithChildren) {
 
   return (
     <ConfigProvider locale={enUS} theme={theme}>
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+      <QueryClientProvider client={queryClient}>
+        <CartProvider>
+          {children}
+        </CartProvider>
+      </QueryClientProvider>
     </ConfigProvider>
   );
 }

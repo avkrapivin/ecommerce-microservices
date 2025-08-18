@@ -85,9 +85,12 @@ public class ProductReviewService {
     private ProductReviewDto convertToDto(ProductReview review) {
         ProductReviewDto dto = new ProductReviewDto();
         dto.setId(review.getId());
-        dto.setProduct(review.getProduct());
-        dto.setUserId(review.getUser().getId());
-        dto.setUserName(review.getUser().getEmail());
+        if (review.getUser() != null) {
+            dto.setUserId(review.getUser().getId());
+            String fullName = (review.getUser().getFirstName() != null ? review.getUser().getFirstName() : "")
+                + (review.getUser().getLastName() != null ? " " + review.getUser().getLastName() : "");
+            dto.setUserName(fullName.trim().isEmpty() ? review.getUser().getEmail() : fullName.trim());
+        }
         dto.setRating(review.getRating());
         dto.setComment(review.getComment());
         dto.setCreatedAt(review.getCreatedAt());

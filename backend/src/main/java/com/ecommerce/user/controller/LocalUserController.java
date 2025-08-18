@@ -1,8 +1,12 @@
 package com.ecommerce.user.controller;
 
+import com.ecommerce.user.dto.UserConfirmationDto;
+import com.ecommerce.user.dto.UserConfirmResetDto;
 import com.ecommerce.user.dto.UserLoginDto;
 import com.ecommerce.user.dto.UserProfileDto;
 import com.ecommerce.user.dto.UserRegistrationDto;
+import com.ecommerce.user.dto.UserResetPasswordDto;
+import com.ecommerce.user.dto.UserUpdateDto;
 import com.ecommerce.user.entity.Role;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -118,7 +122,21 @@ public class LocalUserController {
         }
         
         // Extract email from token
-        String email = accessToken.substring("local-access-".length()).split("-")[0];
+        String tokenPart = accessToken.substring("local-access-".length());
+        String[] parts = tokenPart.split("-");
+        
+        // Find the email part (everything before the last timestamp)
+        if (parts.length < 2) {
+            return ResponseEntity.status(401).build();
+        }
+        
+        // Join all parts except the last one (timestamp) to reconstruct the email
+        StringBuilder emailBuilder = new StringBuilder();
+        for (int i = 0; i < parts.length - 1; i++) {
+            if (i > 0) emailBuilder.append("-");
+            emailBuilder.append(parts[i]);
+        }
+        String email = emailBuilder.toString();
         LocalUser user = users.get(email);
         
         if (user == null) {
@@ -158,6 +176,146 @@ public class LocalUserController {
             .header(HttpHeaders.SET_COOKIE, clearAccess.toString())
             .header(HttpHeaders.SET_COOKIE, clearRefresh.toString())
             .build();
+    }
+
+    @PostMapping("/confirm")
+    public ResponseEntity<?> confirmRegistration(@RequestBody @Valid UserConfirmationDto confirmationDto) {
+        LocalUser user = users.get(confirmationDto.getEmail());
+        
+        if (user == null) {
+            return ResponseEntity.badRequest().body(Map.of("error", "User not found"));
+        }
+        
+        // For local development, accept any 6-digit code
+        if (confirmationDto.getConfirmationCode().length() != 6) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Invalid confirmation code"));
+        }
+        
+        // In local development, we consider the user confirmed automatically
+        // In production, this would validate against Cognito
+        return ResponseEntity.ok(Map.of("message", "Registration confirmed successfully. You can now log in."));
+    }
+
+    @PostMapping("/resend-code")
+    public ResponseEntity<?> resendConfirmationCode(@Valid @RequestBody UserResetPasswordDto resendCodeDto) {
+        LocalUser user = users.get(resendCodeDto.getEmail());
+        
+        if (user == null) {
+            return ResponseEntity.badRequest().body(Map.of("error", "User not found"));
+        }
+        
+        // For local development, just return success
+        // In production, this would send a new code via Cognito
+        return ResponseEntity.ok(Map.of("message", "Confirmation code sent successfully"));
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(@Valid @RequestBody UserResetPasswordDto resetPasswordDto) {
+        LocalUser user = users.get(resetPasswordDto.getEmail());
+        
+        if (user == null) {
+            return ResponseEntity.badRequest().body(Map.of("error", "User not found"));
+        }
+        
+        // For local development, just return success
+        // In production, this would send a reset code via Cognito
+        return ResponseEntity.ok(Map.of("message", "Password reset code sent successfully"));
+    }
+
+    @PostMapping("/confirm-reset")
+    public ResponseEntity<?> confirmPasswordReset(@Valid @RequestBody UserConfirmResetDto confirmResetDto) {
+        LocalUser user = users.get(confirmResetDto.getEmail());
+        
+        if (user == null) {
+            return ResponseEntity.badRequest().body(Map.of("error", "User not found"));
+        }
+        
+        // For local development, accept any 6-digit code
+        if (confirmResetDto.getCode().length() != 6) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Invalid reset code"));
+        }
+        
+        // Update password in local storage
+        String encodedPassword = passwordEncoder.encode(confirmResetDto.getNewPassword());
+        users.put(confirmResetDto.getEmail(), new LocalUser(
+            user.email,
+            encodedPassword,
+            user.firstName,
+            user.lastName
+        ));
+        
+        return ResponseEntity.ok(Map.of("message", "Password reset successfully"));
+    }
+
+    @PutMapping("/profile")
+    public ResponseEntity<?> updateProfile(HttpServletRequest request, @Valid @RequestBody UserUpdateDto updateDto) {
+        System.out.println("=== UPDATE PROFILE DEBUG ===");
+        
+        // Extract token from cookies
+        String accessToken = null;
+        if (request.getCookies() != null) {
+            System.out.println("Cookies found: " + request.getCookies().length);
+            for (var cookie : request.getCookies()) {
+                System.out.println("Cookie: " + cookie.getName() + " = " + cookie.getValue());
+                if ("access_token".equals(cookie.getName())) {
+                    accessToken = cookie.getValue();
+                    break;
+                }
+            }
+        } else {
+            System.out.println("No cookies found");
+        }
+        
+        System.out.println("Access token: " + accessToken);
+        
+        if (accessToken == null || !accessToken.startsWith("local-access-")) {
+            System.out.println("Invalid or missing token");
+            return ResponseEntity.status(401).build();
+        }
+        
+        // Token format: "local-access-email-timestamp"
+        // Remove "local-access-" prefix and split by "-"
+        String tokenPart = accessToken.substring("local-access-".length());
+        String[] parts = tokenPart.split("-");
+        
+        System.out.println("Token parts: " + java.util.Arrays.toString(parts));
+        
+        // Find the email part (everything before the last timestamp)
+        if (parts.length < 2) {
+            System.out.println("Token has insufficient parts");
+            return ResponseEntity.status(401).build();
+        }
+        
+        // Join all parts except the last one (timestamp) to reconstruct the email
+        StringBuilder emailBuilder = new StringBuilder();
+        for (int i = 0; i < parts.length - 1; i++) {
+            if (i > 0) emailBuilder.append("-");
+            emailBuilder.append(parts[i]);
+        }
+        String email = emailBuilder.toString();
+        
+        System.out.println("Extracted email: " + email);
+        
+        LocalUser user = users.get(email);
+        
+        if (user == null) {
+            System.out.println("User not found for email: " + email);
+            return ResponseEntity.status(401).build();
+        }
+        
+        System.out.println("User found: " + user.firstName + " " + user.lastName);
+        System.out.println("Updating to: " + updateDto.getFirstName() + " " + updateDto.getLastName());
+        
+        // Update user profile
+        users.put(email, new LocalUser(
+            email,
+            user.password,
+            updateDto.getFirstName(),
+            updateDto.getLastName()
+        ));
+        
+        System.out.println("Profile updated successfully");
+        return ResponseEntity.ok().build();
     }
 
     // Simple local user class

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Card, Input, Select, Row, Col, Pagination, Typography, Space, Divider, Spin, Image } from 'antd';
-import { getCategories, getProducts, ProductDto } from '../shared/api/products';
-import { useNavigate } from 'react-router-dom';
+import { Card, Input, Select, Row, Col, Pagination, Typography, Space, Divider, Spin, Image, Skeleton, Empty, Slider } from 'antd';
+import { getCategories, getProducts, Product } from '../shared/api/products';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 
 const PAGE_SIZE_OPTIONS = [12, 24, 48];
 const FALLBACK_IMG =
@@ -9,9 +9,10 @@ const FALLBACK_IMG =
 
 export function Catalog() {
   const [loading, setLoading] = useState(false);
-  const [products, setProducts] = useState<ProductDto[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
   const [total, setTotal] = useState(0);
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   // Filters state
   const [search, setSearch] = useState<string>('');
@@ -20,8 +21,18 @@ export function Catalog() {
   const [page, setPage] = useState<number>(1); // 1-based for UI
   const [sortBy, setSortBy] = useState<string | undefined>(undefined);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc' | undefined>(undefined);
+  const [priceRange, setPriceRange] = useState<[number, number] | null>(null);
 
   const [categories, setCategories] = useState<{ label: string; value: number }[]>([]);
+
+  // Initialize categoryId from query string
+  useEffect(() => {
+    const catId = searchParams.get('categoryId');
+    if (catId) {
+      const parsed = Number(catId);
+      if (!Number.isNaN(parsed)) setCategoryId(parsed);
+    }
+  }, []);
 
   useEffect(() => {
     // Load categories once
@@ -36,21 +47,19 @@ export function Catalog() {
       setLoading(true);
       try {
         const data = await getProducts(
-          {
-            search: search || undefined,
-            categoryId,
-            sortBy,
-            sortDirection,
-            page: page - 1, // backend expects 0-based
-            size,
-          },
-          controller.signal,
+          page - 1, 
+          size,
+          search || undefined,
+          categoryId,
+          priceRange ? priceRange[0] : undefined,
+          priceRange ? priceRange[1] : undefined,
+          sortBy,
+          sortDirection
         );
         setProducts(data.content);
         setTotal(data.totalElements);
       } catch (e: any) {
         if (e?.name !== 'CanceledError' && e?.message !== 'canceled') {
-          // Ignore cancellation; log other errors
           console.error(e);
         }
       } finally {
@@ -59,7 +68,14 @@ export function Catalog() {
     };
     load();
     return () => controller.abort();
-  }, [search, categoryId, page, size, sortBy, sortDirection]);
+  }, [search, categoryId, page, size, sortBy, sortDirection, priceRange]);
+
+  const onCategoryChange = (v: number | undefined) => {
+    setPage(1);
+    setCategoryId(v);
+    if (v) setSearchParams({ categoryId: String(v) });
+    else setSearchParams({});
+  };
 
   return (
     <div>
@@ -79,10 +95,8 @@ export function Catalog() {
             allowClear
             placeholder="Category"
             options={categories}
-            onChange={(v) => {
-              setPage(1);
-              setCategoryId(v);
-            }}
+            onChange={onCategoryChange}
+            value={categoryId}
             style={{ minWidth: 200 }}
           />
           <Select
@@ -106,6 +120,18 @@ export function Catalog() {
             onChange={(v) => setSortDirection(v)}
             style={{ width: 120 }}
           />
+          <div style={{ width: 240 }}>
+            <Typography.Text type="secondary">Price range</Typography.Text>
+            <Slider
+              range
+              min={0}
+              max={5000}
+              step={10}
+              value={priceRange ?? undefined}
+              onChange={(v) => setPriceRange(v as [number, number])}
+              onAfterChange={() => setPage(1)}
+            />
+          </div>
           <Select
             value={size}
             onChange={(v) => {
@@ -119,7 +145,18 @@ export function Catalog() {
       </Card>
 
       {loading ? (
-        <Spin />
+        <Row gutter={[16, 16]}>
+          {Array.from({ length: size }).map((_, i) => (
+            <Col key={i} xs={24} sm={12} md={8} lg={6}>
+              <Card>
+                <Skeleton.Image style={{ width: '100%', height: 160 }} active />
+                <Skeleton active paragraph={{ rows: 1 }} title />
+              </Card>
+            </Col>
+          ))}
+        </Row>
+      ) : products.length === 0 ? (
+        <Empty description="No products found" />
       ) : (
         <>
           <Row gutter={[16, 16]}>
@@ -142,7 +179,7 @@ export function Catalog() {
                     onClick={() => navigate(`/product/${p.id}`)}
                   >
                     <Typography.Text strong>{p.name}</Typography.Text>
-                    <div style={{ marginTop: 8 }}>${p.price?.toFixed(2)}</div>
+                    <div style={{ marginTop: 8 }}>${p.price.toFixed(2)}</div>
                   </Card>
                 </Col>
               );

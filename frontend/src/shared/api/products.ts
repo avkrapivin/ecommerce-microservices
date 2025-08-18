@@ -1,92 +1,133 @@
-import { http } from './http';
+import axios from 'axios';
 
-export interface CategoryDto {
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api';
+
+// Create axios instance
+const api = axios.create({
+  baseURL: API_BASE_URL,
+});
+
+export interface Product {
   id: number;
   name: string;
-  parentId?: number | null;
+  description: string;
+  price: number; // Price in cents (integer)
+  images: ProductImage[];
+  categoryId: number;
+  categoryName: string;
+  stockQuantity: number;
+  sku: string;
+  active: boolean;
+  reviews: ProductReview[];
+  specifications: ProductSpecification[];
+  createdAt: string;
+  updatedAt: string;
 }
 
-export interface ProductImageDto {
+export interface ProductImage {
   id: number;
-  productId?: number;
+  productId: number;
   imageUrl: string;
-  isMain?: boolean;
+  fileName: string;
+  fileType: string;
+  fileSize: number;
+  isMain: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
-export interface ProductDto {
+export interface ProductReview {
   id: number;
-  name: string;
-  price: number;
-  description?: string;
-  images?: ProductImageDto[];
-  // Extend with more fields as needed
+  productId: number;
+  userId: number;
+  rating: number;
+  comment: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
-export interface PageResponse<T> {
-  content: T[];
+export interface ProductSpecification {
+  id: number;
+  productId: number;
+  name: string;
+  value: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ProductListResponse {
+  content: Product[];
   totalElements: number;
   totalPages: number;
   size: number;
-  number: number; // zero-based page index
+  number: number;
 }
 
-export interface ProductFilter {
-  search?: string;
-  categoryId?: number;
-  minPrice?: number;
-  maxPrice?: number;
-  specifications?: string[];
-  sortBy?: string;
-  sortDirection?: 'asc' | 'desc';
-  page?: number; // zero-based
-  size?: number;
-}
-
-export async function getProducts(filter: ProductFilter, signal?: AbortSignal) {
-  const { data } = await http.get<PageResponse<ProductDto>>('/products', {
-    params: {
-      search: filter.search || undefined,
-      categoryId: filter.categoryId || undefined,
-      minPrice: filter.minPrice || undefined,
-      maxPrice: filter.maxPrice || undefined,
-      specifications:
-        filter.specifications && filter.specifications.length > 0
-          ? filter.specifications
-          : undefined,
-      sortBy: filter.sortBy || undefined,
-      sortDirection: filter.sortDirection || undefined,
-      page: filter.page ?? 0,
-      size: filter.size ?? 24,
-    },
-    signal,
-  });
-  return data;
-}
-
-export async function getCategories() {
-  const { data } = await http.get<CategoryDto[]>('/categories');
-  return data;
-}
-
-export async function getProductById(id: number) {
-  const { data } = await http.get<ProductDto>(`/products/${id}`);
-  return data;
-}
-
-export async function getProductImages(productId: number) {
-  const { data } = await http.get<ProductImageDto[]>(`/products/${productId}/images`);
-  return data;
-}
-
-export interface ProductReviewDto {
+export interface Category {
   id: number;
-  rating: number; // 1-5
-  comment?: string;
-  userName?: string;
-  createdAt?: string;
+  name: string;
+  description?: string;
 }
 
-export async function getProductReviews(productId: number) {
-  const { data } = await http.get<ProductReviewDto[]>(`/products/${productId}/reviews`);
-  return data;
-}
+// Products API functions
+export const productsApi = {
+  async getProducts(
+    page: number = 0, 
+    size: number = 20,
+    search?: string,
+    categoryId?: number,
+    minPrice?: number,
+    maxPrice?: number,
+    sortBy?: string,
+    sortDirection?: string
+  ): Promise<ProductListResponse> {
+    const params = new URLSearchParams();
+    params.append('page', page.toString());
+    params.append('size', size.toString());
+    
+    if (search) params.append('search', search);
+    if (categoryId) params.append('categoryId', categoryId.toString());
+    if (minPrice) params.append('minPrice', minPrice.toString());
+    if (maxPrice) params.append('maxPrice', maxPrice.toString());
+    if (sortBy) params.append('sortBy', sortBy);
+    if (sortDirection) params.append('sortDirection', sortDirection);
+    
+    const response = await api.get(`/products?${params.toString()}`);
+    return response.data;
+  },
+
+  async getProduct(id: number): Promise<Product> {
+    const response = await api.get(`/products/${id}`);
+    return response.data;
+  },
+
+  async getProductsByCategory(categoryId: number, page: number = 0, size: number = 20): Promise<ProductListResponse> {
+    const response = await api.get(`/products/category/${categoryId}?page=${page}&size=${size}`);
+    return response.data;
+  },
+
+  async searchProducts(query: string, page: number = 0, size: number = 20): Promise<ProductListResponse> {
+    const response = await api.get(`/products/search?q=${encodeURIComponent(query)}&page=${page}&size=${size}`);
+    return response.data;
+  },
+
+  async getCategories(): Promise<Category[]> {
+    const response = await api.get('/categories');
+    return response.data;
+  },
+
+  async getCategory(id: number): Promise<Category> {
+    const response = await api.get(`/categories/${id}`);
+    return response.data;
+  },
+};
+
+// Export individual functions for backward compatibility
+export const {
+  getProducts,
+  getProduct,
+  getProductsByCategory,
+  searchProducts,
+  getCategories,
+  getCategory,
+} = productsApi;

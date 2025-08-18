@@ -200,7 +200,12 @@ public class ProductService {
         dto.setId(review.getId());
         dto.setRating(review.getRating());
         dto.setComment(review.getComment());
-        dto.setUserName(review.getUser().getFirstName() + " " + review.getUser().getLastName());
+        if (review.getUser() != null) {
+            dto.setUserId(review.getUser().getId());
+            String fullName = (review.getUser().getFirstName() != null ? review.getUser().getFirstName() : "")
+                + (review.getUser().getLastName() != null ? " " + review.getUser().getLastName() : "");
+            dto.setUserName(fullName.trim().isEmpty() ? review.getUser().getEmail() : fullName.trim());
+        }
         dto.setCreatedAt(review.getCreatedAt());
         return dto;
     }

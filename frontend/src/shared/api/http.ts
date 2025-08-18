@@ -8,12 +8,19 @@ export const http = axios.create({
   withCredentials: true, // send cookies (HttpOnly) with requests
 });
 
-// Simple 401 handling: redirect to login page
+// Simple 401 handling: redirect to login page for protected flows only
 http.interceptors.response.use(
   (res) => res,
   (error) => {
-    if (error?.response?.status === 401) {
-      // Invalidate client state and redirect to login
+    const status = error?.response?.status;
+    const url: string = error?.config?.url ?? '';
+
+    if (status === 401) {
+      // Do NOT redirect on profile probe so public pages work unauthenticated
+      if (url.includes('/users/profile')) {
+        return Promise.reject(error);
+      }
+      // Redirect to login only if not already there
       if (window.location.pathname !== '/auth/login') {
         window.location.href = '/auth/login';
       }
