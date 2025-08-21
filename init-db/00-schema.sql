@@ -20,6 +20,7 @@ CREATE SEQUENCE IF NOT EXISTS product_images_id_seq START 1;
 CREATE SEQUENCE IF NOT EXISTS product_reviews_id_seq START 1;
 CREATE SEQUENCE IF NOT EXISTS product_specifications_id_seq START 1;
 CREATE SEQUENCE IF NOT EXISTS product_reservations_id_seq START 1;
+CREATE SEQUENCE IF NOT EXISTS reservations_id_seq START 1;
 CREATE SEQUENCE IF NOT EXISTS shipping_info_id_seq START 1;
 CREATE SEQUENCE IF NOT EXISTS addresses_id_seq START 1;
 
@@ -153,6 +154,18 @@ CREATE TABLE IF NOT EXISTS product_reservations (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Create reservations table
+CREATE TABLE IF NOT EXISTS reservations (
+    id BIGINT PRIMARY KEY DEFAULT nextval('reservations_id_seq'),
+    email VARCHAR(255) NOT NULL,
+    reservation_number VARCHAR(255) NOT NULL UNIQUE,
+    status VARCHAR(50) NOT NULL DEFAULT 'ACTIVE',
+    total_amount DECIMAL(10,2) NOT NULL,
+    expires_at TIMESTAMP NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Create shipping_info table
 CREATE TABLE IF NOT EXISTS shipping_info (
     id BIGINT PRIMARY KEY DEFAULT nextval('shipping_info_id_seq'),
@@ -177,6 +190,10 @@ CREATE INDEX IF NOT EXISTS idx_product_reviews_product_id ON product_reviews(pro
 CREATE INDEX IF NOT EXISTS idx_product_specifications_product_id ON product_specifications(product_id);
 CREATE INDEX IF NOT EXISTS idx_product_reservations_product_id ON product_reservations(product_id);
 CREATE INDEX IF NOT EXISTS idx_product_reservations_user_id ON product_reservations(user_id);
+CREATE INDEX IF NOT EXISTS idx_reservations_email ON reservations(email);
+CREATE INDEX IF NOT EXISTS idx_reservations_status ON reservations(status);
+CREATE INDEX IF NOT EXISTS idx_reservations_expires_at ON reservations(expires_at);
+CREATE INDEX IF NOT EXISTS idx_reservations_reservation_number ON reservations(reservation_number);
 CREATE INDEX IF NOT EXISTS idx_shipping_info_order_id ON shipping_info(order_id);
 CREATE INDEX IF NOT EXISTS idx_shipping_info_tracking_number ON shipping_info(tracking_number);
 CREATE INDEX IF NOT EXISTS idx_addresses_user_id ON addresses(user_id);

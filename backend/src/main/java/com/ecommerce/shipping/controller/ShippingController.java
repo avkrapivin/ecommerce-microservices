@@ -13,7 +13,7 @@ public class ShippingController {
     private final ShippingService shippingService;
 
     @GetMapping("/{orderId}")
-    public ResponseEntity<ShippingInfoDto> getShippingInfo(@PathVariable String orderId) {
+    public ResponseEntity<ShippingInfoDto> getShippingInfo(@PathVariable Long orderId) {
         ShippingInfoDto shippingInfo = shippingService.getShippingInfo(orderId);
         return ResponseEntity.ok(shippingInfo);
     }

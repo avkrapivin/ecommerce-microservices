@@ -30,7 +30,7 @@ public class OrderStatusUpdateListener {
                 jsonNode.get("trackingNumber").asText() : null;
 
             // Находим запись о доставке
-            Optional<ShippingInfo> shippingInfoOpt = shippingInfoRepository.findByOrderId(orderId);
+            Optional<ShippingInfo> shippingInfoOpt = shippingInfoRepository.findByOrderId(Long.valueOf(orderId));
             
             if (shippingInfoOpt.isPresent()) {
                 ShippingInfo shippingInfo = shippingInfoOpt.get();

@@ -16,7 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class ShippingService {
     private final ShippingInfoRepository shippingInfoRepository;
 
-    public ShippingInfoDto getShippingInfo(String orderId) {
+    public ShippingInfoDto getShippingInfo(Long orderId) {
         ShippingInfo shippingInfo = shippingInfoRepository.findByOrderId(orderId)
                 .orElseThrow(() -> new ShippingInfoNotFoundException("Shipping info not found for order: " + orderId));
         return convertToDto(shippingInfo);
@@ -29,7 +29,7 @@ public class ShippingService {
     }
 
     @Transactional
-    public void createShippingInfo(String orderId) {
+    public void createShippingInfo(Long orderId) {
         if (shippingInfoRepository.existsByOrderId(orderId)) {
             log.warn("Shipping info already exists for order: {}", orderId);
             return;
@@ -44,7 +44,7 @@ public class ShippingService {
     }
 
     @Transactional
-    public void updateShippingInfo(String orderId, String shippoShipmentId, String trackingNumber, 
+    public void updateShippingInfo(Long orderId, String shippoShipmentId, String trackingNumber, 
                                   String trackingUrl, String labelUrl, String carrier, String service, 
                                   String amount, String currency, String estimatedDays) {
         ShippingInfo shippingInfo = shippingInfoRepository.findByOrderId(orderId)

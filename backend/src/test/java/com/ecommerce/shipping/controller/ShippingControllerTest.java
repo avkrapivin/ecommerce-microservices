@@ -47,19 +47,19 @@ class ShippingControllerTest {
         // Arrange
         ShippingInfoDto shippingInfo = new ShippingInfoDto();
         shippingInfo.setId(1L);
-        shippingInfo.setOrderId("order_123");
+        shippingInfo.setOrderId(123L);
         shippingInfo.setTrackingNumber("1Z999AA10123456789");
         shippingInfo.setStatus(ShippingStatus.LABEL_CREATED);
         shippingInfo.setCreatedAt(LocalDateTime.now());
         shippingInfo.setUpdatedAt(LocalDateTime.now());
 
-        when(shippingService.getShippingInfo("order_123")).thenReturn(shippingInfo);
+        when(shippingService.getShippingInfo(123L)).thenReturn(shippingInfo);
 
         // Act & Assert
-        mockMvc.perform(get("/shipping/order_123"))
+        mockMvc.perform(get("/shipping/123"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(1))
-                .andExpect(jsonPath("$.orderId").value("order_123"))
+                .andExpect(jsonPath("$.orderId").value(123))
                 .andExpect(jsonPath("$.trackingNumber").value("1Z999AA10123456789"))
                 .andExpect(jsonPath("$.status").value("LABEL_CREATED"));
     }
@@ -68,13 +68,13 @@ class ShippingControllerTest {
     @WithMockUser
     void getShippingInfo_WhenNotFound_ShouldReturnNotFound() throws Exception {
         // Arrange
-        when(shippingService.getShippingInfo("order_123")).thenThrow(new ShippingInfoNotFoundException("Shipping info not found for order: order_123"));
+        when(shippingService.getShippingInfo(123L)).thenThrow(new ShippingInfoNotFoundException("Shipping info not found for order: 123"));
 
         // Act & Assert
-        mockMvc.perform(get("/shipping/order_123"))
+        mockMvc.perform(get("/shipping/123"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.status").value(404))
-                .andExpect(jsonPath("$.message").value("Shipping info not found for order: order_123"));
+                .andExpect(jsonPath("$.message").value("Shipping info not found for order: 123"));
     }
 
     @Test
@@ -83,7 +83,7 @@ class ShippingControllerTest {
         // Arrange
         ShippingInfoDto shippingInfo = new ShippingInfoDto();
         shippingInfo.setId(1L);
-        shippingInfo.setOrderId("order_123");
+        shippingInfo.setOrderId(123L);
         shippingInfo.setTrackingNumber("1Z999AA10123456789");
         shippingInfo.setStatus(ShippingStatus.IN_TRANSIT);
         shippingInfo.setCreatedAt(LocalDateTime.now());
@@ -95,7 +95,7 @@ class ShippingControllerTest {
         mockMvc.perform(get("/shipping/tracking/1Z999AA10123456789"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(1))
-                .andExpect(jsonPath("$.orderId").value("order_123"))
+                .andExpect(jsonPath("$.orderId").value(123))
                 .andExpect(jsonPath("$.trackingNumber").value("1Z999AA10123456789"))
                 .andExpect(jsonPath("$.status").value("IN_TRANSIT"));
     }

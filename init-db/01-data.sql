@@ -16,6 +16,7 @@ CREATE SEQUENCE IF NOT EXISTS product_specifications_id_seq START 1;
 CREATE SEQUENCE IF NOT EXISTS product_reservations_id_seq START 1;
 CREATE SEQUENCE IF NOT EXISTS shipping_info_id_seq START 1;
 
+
 -- Insert test categories
 INSERT INTO categories (id, name, description, parent_id, active, created_at, updated_at) VALUES
 (1, 'Electronics', 'Electronic devices and gadgets', NULL, true, NOW(), NOW()),
@@ -148,20 +149,15 @@ SELECT setval('product_specifications_id_seq', (SELECT MAX(id) FROM product_spec
 SELECT setval('product_reservations_id_seq', (SELECT MAX(id) FROM product_reservations));
 SELECT setval('shipping_info_id_seq', (SELECT MAX(id) FROM shipping_info));
 
--- Create indexes for better performance
-CREATE INDEX IF NOT EXISTS idx_products_category_id ON products(category_id);
-CREATE INDEX IF NOT EXISTS idx_products_active ON products(active);
-CREATE INDEX IF NOT EXISTS idx_orders_user_id ON orders(user_id);
-CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);
-CREATE INDEX IF NOT EXISTS idx_order_items_order_id ON order_items(order_id);
-CREATE INDEX IF NOT EXISTS idx_product_images_product_id ON product_images(product_id);
-CREATE INDEX IF NOT EXISTS idx_product_reviews_product_id ON product_reviews(product_id);
-CREATE INDEX IF NOT EXISTS idx_product_specifications_product_id ON product_specifications(product_id);
-CREATE INDEX IF NOT EXISTS idx_product_reservations_product_id ON product_reservations(product_id);
-CREATE INDEX IF NOT EXISTS idx_product_reservations_user_id ON product_reservations(user_id);
-CREATE INDEX IF NOT EXISTS idx_shipping_info_order_id ON shipping_info(order_id);
-CREATE INDEX IF NOT EXISTS idx_shipping_info_tracking_number ON shipping_info(tracking_number);
+
+
+
+
+
+
+
+
 
 -- Grant permissions
-GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO ecommerce_user;
-GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO ecommerce_user; 
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO postgres;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO postgres; 

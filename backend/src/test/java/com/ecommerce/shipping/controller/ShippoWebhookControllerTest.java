@@ -46,7 +46,7 @@ class ShippoWebhookControllerTest {
         
         shippingInfo = new ShippingInfo();
         shippingInfo.setId(1L);
-        shippingInfo.setOrderId("ORD-12345678");
+        shippingInfo.setOrderId(12345678L);
         shippingInfo.setTrackingNumber("TRK123");
         shippingInfo.setStatus(ShippingStatus.PENDING);
         shippingInfo.setCreatedAt(LocalDateTime.now());

@@ -8,7 +8,7 @@ import java.time.LocalDateTime;
 @Data
 public class ShippingInfoDto {
     private Long id;
-    private String orderId;
+    private Long orderId;
     private String shippoShipmentId;
     private String shippoRateId;
     private String shippoTransactionId;

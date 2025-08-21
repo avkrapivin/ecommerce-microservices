@@ -92,7 +92,7 @@ public class OrderService {
                 throw new OrderStatusException("Item quantity must be positive");
             }
 
-            Product product = productService.getProductEntityById(itemRequest.getProductId());
+             Product product = productService.getProductEntityById(itemRequest.getProductId());
 
             if (product.getPrice().compareTo(BigDecimal.ZERO) <= 0) {
                 throw new OrderStatusException("Product price must be positive");
@@ -124,7 +124,7 @@ public class OrderService {
         savedOrder = orderRepository.save(savedOrder);
 
         // Создаем запись о доставке
-        shippingService.createShippingInfo(savedOrder.getOrderNumber());
+        shippingService.createShippingInfo(savedOrder.getId());
 
         // Публикуем событие о создании заказа
         orderEventPublisher.publishOrderCreated(savedOrder);

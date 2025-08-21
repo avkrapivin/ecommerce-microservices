@@ -16,7 +16,7 @@ public class ShippingInfo {
     private Long id;
 
     @Column(name = "order_id", nullable = false, unique = true)
-    private String orderId;
+    private Long orderId;
 
     @Column(name = "shippo_shipment_id")
     private String shippoShipmentId;

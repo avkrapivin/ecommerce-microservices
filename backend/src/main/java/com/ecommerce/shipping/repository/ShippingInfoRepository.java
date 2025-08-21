@@ -10,8 +10,8 @@ import java.util.Optional;
 
 @Repository
 public interface ShippingInfoRepository extends JpaRepository<ShippingInfo, Long> {
-    Optional<ShippingInfo> findByOrderId(String orderId);
-    boolean existsByOrderId(String orderId);
+    Optional<ShippingInfo> findByOrderId(Long orderId);
+    boolean existsByOrderId(Long orderId);
     
     @Query("SELECT s FROM ShippingInfo s WHERE s.trackingNumber = :trackingNumber OR s.shippoShipmentId = :shipmentId")
     Optional<ShippingInfo> findByTrackingNumberOrShippoShipmentId(@Param("trackingNumber") String trackingNumber, 

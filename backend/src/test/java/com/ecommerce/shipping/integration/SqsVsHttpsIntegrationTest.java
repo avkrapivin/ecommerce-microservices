@@ -133,8 +133,8 @@ class SqsVsHttpsIntegrationTest {
         });
         
         // Настройка findByOrderId
-        when(shippingInfoRepository.findByOrderId(anyString())).thenAnswer(invocation -> {
-            String orderId = invocation.getArgument(0);
+        when(shippingInfoRepository.findByOrderId(any(Long.class))).thenAnswer(invocation -> {
+            Long orderId = invocation.getArgument(0);
             return testShippingInfos.stream()
                     .filter(info -> info.getOrderId().equals(orderId))
                     .findFirst();
@@ -237,7 +237,7 @@ class SqsVsHttpsIntegrationTest {
     @Test
     void shouldReceiveMessageFromSnsToSqs() throws Exception {
         // Given
-        String orderId = "test-order-123";
+        Long orderId = 123L;
         String messageJson = createOrderStatusUpdateMessage(orderId, "SHIPPED", "TRACK123");
 
         // When - отправляем сообщение в SNS
@@ -259,7 +259,7 @@ class SqsVsHttpsIntegrationTest {
             String receivedBody = sqsMessage.body();
             
             // Проверяем что JSON содержит ожидаемые данные
-            assertThat(receivedBody).contains(orderId);
+            assertThat(receivedBody).contains(orderId.toString());
             assertThat(receivedBody).contains("SHIPPED");
             assertThat(receivedBody).contains("TRACK123");
         });
@@ -268,7 +268,7 @@ class SqsVsHttpsIntegrationTest {
     @Test
     void shouldProcessMessageDirectlyViaHttps() throws Exception {
         // Given
-        String orderId = "test-order-456";
+        Long orderId = 456L;
         String messageJson = createOrderStatusUpdateMessage(orderId, "IN_TRANSIT", "TRACK456");
 
         // When - обрабатываем напрямую через HTTPS путь (имитируя webhook)
@@ -278,7 +278,7 @@ class SqsVsHttpsIntegrationTest {
         verify(orderStatusUpdateListener).handleOrderStatusUpdate(messageJson);
         
         // Проверяем содержимое сообщения
-        assertThat(messageJson).contains(orderId);
+        assertThat(messageJson).contains(orderId.toString());
         assertThat(messageJson).contains("IN_TRANSIT");
         assertThat(messageJson).contains("TRACK456");
     }
@@ -286,8 +286,8 @@ class SqsVsHttpsIntegrationTest {
     @Test
     void shouldDeliverMessagesViaBothPaths() throws Exception {
         // Given
-        String orderIdSqs = "sqs-order-789";
-        String orderIdHttps = "https-order-790";
+        Long orderIdSqs = 789L;
+        Long orderIdHttps = 790L;
         String sqsMessage = createOrderStatusUpdateMessage(orderIdSqs, "DELIVERED", "SQS_TRACK789");
         String httpsMessage = createOrderStatusUpdateMessage(orderIdHttps, "DELIVERED", "HTTPS_TRACK790");
 
@@ -309,7 +309,7 @@ class SqsVsHttpsIntegrationTest {
             String receivedBody = sqsMsg.body();
             
             // Проверяем содержимое SQS сообщения
-            assertThat(receivedBody).contains(orderIdSqs);
+            assertThat(receivedBody).contains(orderIdSqs.toString());
             assertThat(receivedBody).contains("DELIVERED");
             assertThat(receivedBody).contains("SQS_TRACK789");
         });
@@ -352,7 +352,7 @@ class SqsVsHttpsIntegrationTest {
 
 
 
-    private String createOrderStatusUpdateMessage(String orderId, String status, String trackingNumber) throws Exception {
+    private String createOrderStatusUpdateMessage(Long orderId, String status, String trackingNumber) throws Exception {
         return objectMapper.writeValueAsString(java.util.Map.of(
                 "orderId", orderId,
                 "status", status,

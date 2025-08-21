@@ -24,6 +24,7 @@ import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
@@ -38,6 +39,7 @@ import static org.mockito.Mockito.*;
 
 @SpringBootTest
 @ActiveProfiles("test")
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 @EnableAutoConfiguration(exclude = {
         org.springframework.boot.autoconfigure.security.oauth2.client.servlet.OAuth2ClientAutoConfiguration.class,
         org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration.class
@@ -190,7 +192,7 @@ public class OrderServiceTest extends OrderIntegrationTest {
         when(calculationService.calculateShippingCost(any())).thenReturn(BigDecimal.ZERO);
         when(calculationService.calculateTax(any())).thenReturn(BigDecimal.ZERO);
         when(calculationService.calculateTotal(any(), any(), any())).thenReturn(BigDecimal.valueOf(100.0));
-        doNothing().when(shippingService).createShippingInfo(any(String.class));
+        doNothing().when(shippingService).createShippingInfo(any(Long.class));
 
         // Act
         OrderDto response = orderService.createOrder(userId, request);
@@ -209,7 +211,7 @@ public class OrderServiceTest extends OrderIntegrationTest {
         verify(calculationService).calculateShippingCost(any());
         verify(calculationService).calculateTax(any());
         verify(calculationService).calculateTotal(any(), any(), any());
-        verify(shippingService).createShippingInfo("ORD-12345678");
+        verify(shippingService).createShippingInfo(1L);
     }
 
     @Test
@@ -342,14 +344,14 @@ public class OrderServiceTest extends OrderIntegrationTest {
         when(calculationService.calculateTax(any())).thenReturn(BigDecimal.valueOf(10.0));
         when(calculationService.calculateTotal(any(), any(), any())).thenReturn(BigDecimal.valueOf(120.0));
         when(orderRepository.save(any())).thenReturn(testOrder);
-        doNothing().when(shippingService).createShippingInfo(any(String.class));
+        doNothing().when(shippingService).createShippingInfo(any(Long.class));
         
         OrderDto result = orderService.createOrder(1L, request);
         
         assertNotNull(result);
         assertEquals(OrderStatus.PENDING, result.getStatus());
         verify(productReservationService).reserveProduct(1L, 1L, 1);
-        verify(shippingService).createShippingInfo("ORD-123456");
+        verify(shippingService).createShippingInfo(1L);
     }
     
     @Test

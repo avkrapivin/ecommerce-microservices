@@ -37,7 +37,7 @@ class OrderStatusUpdateListenerTest {
         
         shippingInfo = new ShippingInfo();
         shippingInfo.setId(1L);
-        shippingInfo.setOrderId("ORD-12345678");
+        shippingInfo.setOrderId(12345678L);
         shippingInfo.setStatus(ShippingStatus.PENDING);
         shippingInfo.setCreatedAt(LocalDateTime.now());
         shippingInfo.setUpdatedAt(LocalDateTime.now());
@@ -46,9 +46,9 @@ class OrderStatusUpdateListenerTest {
     @Test
     void handleOrderStatusUpdate_ShouldUpdateShippingStatus() throws Exception {
         // Given
-        String messageBody = "{\"orderId\":\"ORD-12345678\",\"status\":\"SHIPPED\",\"trackingNumber\":\"TRK123\"}";
+        String messageBody = "{\"orderId\":\"12345678\",\"status\":\"SHIPPED\",\"trackingNumber\":\"TRK123\"}";
         
-        when(shippingInfoRepository.findByOrderId("ORD-12345678"))
+        when(shippingInfoRepository.findByOrderId(12345678L))
                 .thenReturn(Optional.of(shippingInfo));
         when(shippingInfoRepository.save(any(ShippingInfo.class)))
                 .thenReturn(shippingInfo);
@@ -57,32 +57,32 @@ class OrderStatusUpdateListenerTest {
         listener.handleOrderStatusUpdate(messageBody);
 
         // Then
-        verify(shippingInfoRepository).findByOrderId("ORD-12345678");
+        verify(shippingInfoRepository).findByOrderId(12345678L);
         verify(shippingInfoRepository).save(any(ShippingInfo.class));
     }
 
     @Test
     void handleOrderStatusUpdate_ShouldHandleMissingShippingInfo() throws Exception {
         // Given
-        String messageBody = "{\"orderId\":\"ORD-12345678\",\"status\":\"SHIPPED\"}";
+        String messageBody = "{\"orderId\":\"12345678\",\"status\":\"SHIPPED\"}";
         
-        when(shippingInfoRepository.findByOrderId("ORD-12345678"))
+        when(shippingInfoRepository.findByOrderId(12345678L))
                 .thenReturn(Optional.empty());
 
         // When
         listener.handleOrderStatusUpdate(messageBody);
 
         // Then
-        verify(shippingInfoRepository).findByOrderId("ORD-12345678");
+        verify(shippingInfoRepository).findByOrderId(12345678L);
         verify(shippingInfoRepository, never()).save(any(ShippingInfo.class));
     }
 
     @Test
     void handleOrderStatusUpdate_ShouldHandleUnknownStatus() throws Exception {
         // Given
-        String messageBody = "{\"orderId\":\"ORD-12345678\",\"status\":\"UNKNOWN_STATUS\"}";
+        String messageBody = "{\"orderId\":\"12345678\",\"status\":\"UNKNOWN_STATUS\"}";
         
-        when(shippingInfoRepository.findByOrderId("ORD-12345678"))
+        when(shippingInfoRepository.findByOrderId(12345678L))
                 .thenReturn(Optional.of(shippingInfo));
         when(shippingInfoRepository.save(any(ShippingInfo.class)))
                 .thenReturn(shippingInfo);
@@ -91,7 +91,7 @@ class OrderStatusUpdateListenerTest {
         listener.handleOrderStatusUpdate(messageBody);
 
         // Then
-        verify(shippingInfoRepository).findByOrderId("ORD-12345678");
+        verify(shippingInfoRepository).findByOrderId(12345678L);
         verify(shippingInfoRepository).save(any(ShippingInfo.class));
     }
 } 
